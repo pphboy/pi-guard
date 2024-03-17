@@ -33,7 +33,7 @@ func (a *AppDaoImpl) Update(app *models.NodeApp) error {
 }
 
 func (a *AppDaoImpl) Delete(app *models.NodeApp) error {
-	return a.Db.Debug().Delete("NODE_APP_ID = ?", app.NodeAppId).Error
+	return a.Db.Debug().Delete(app, "NODE_APP_ID = ?", app.NodeAppId).Error
 }
 
 func (a *AppDaoImpl) GetAll() (list []*models.NodeApp, err error) {

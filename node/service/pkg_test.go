@@ -56,7 +56,6 @@ func TestFileS(t *testing.T) {
 
 func TestPkgInstall(t *testing.T) {
 	initer := NewIniter()
-	initer.InitBase()
 
 	p := NewPkgService(BaseService{
 		DB: initer.GetDB(),
@@ -90,4 +89,19 @@ func TestPkgInstall(t *testing.T) {
 	}()
 
 	wg.Wait()
+}
+
+func TestUninstallApp(t *testing.T) {
+	initer := NewIniter()
+	p := NewPkgService(BaseService{
+		DB: initer.GetDB(),
+	})
+
+	if err := p.UninstallApp(&models.NodeApp{
+		NodeAppId:   "412D49368D6C41368A5ADAA9D377BB68",
+		NodeAppName: "pghttp",
+	}); err != nil {
+		t.Fatal("uninstall app", err)
+	}
+
 }

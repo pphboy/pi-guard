@@ -47,9 +47,17 @@ func (p *pkgService) UninstallApp(np *models.NodeApp) error {
 	// 删除 /pg/app 路径中的应用，移动到 pg/.trash
 	oldPath := fmt.Sprintf("%s/%s", sys.PgSite(sys.PG_APP).Path, np.NodeAppName)
 	newPath := fmt.Sprintf("%s/%s_%s", sys.PgSite(sys.PG_TRASH).Path, np.NodeAppName, tool.GetUUIDUpper())
-	os.Rename(oldPath, newPath)
+	logrus.Printf("move to pg/.trash\noldPath:%s\nnewPath:%s\n", oldPath, newPath)
+	if err := os.Rename(oldPath, newPath); err != nil {
+		return fmt.Errorf("uninstall app, %w", err)
+	}
 
 	// 删除数据库中的记录，软删除
+	if err := p.appDao.Delete(np); err != nil {
+		// rename back
+		os.Rename(newPath, oldPath)
+		return err
+	}
 
 	return nil
 }

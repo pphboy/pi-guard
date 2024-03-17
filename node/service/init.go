@@ -16,7 +16,11 @@ type Initer interface {
 }
 
 func NewIniter() Initer {
-	return &InitService{}
+	i := &InitService{}
+
+	i.InitBase()
+
+	return i
 }
 
 type InitService struct {
@@ -25,6 +29,7 @@ type InitService struct {
 
 // 初始化基础
 func (i *InitService) InitBase() {
+	logrus.Print("initer base")
 	i.initializeDefaultPath()
 }
 
