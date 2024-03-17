@@ -1,0 +1,6 @@
+[PkgConfig]
+Name = "PgHttp"
+Intro = "PgHttp_v2"
+Type = "NORM"
+Hash = ""
+Port = 8081

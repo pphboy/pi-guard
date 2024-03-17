@@ -1,6 +1,0 @@
-[PkgConfig]
-Name = "test"
-Intro = "test apk"
-Type = "SYS"
-Hash = "alsdfkasjdlkfjaskl"
-Port = 8081
