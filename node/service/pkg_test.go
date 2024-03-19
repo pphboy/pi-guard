@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"go-node/models"
 	"log"
 	"net/http"
@@ -104,4 +105,19 @@ func TestUninstallApp(t *testing.T) {
 		t.Fatal("uninstall app", err)
 	}
 
+}
+
+func TestLoadAppList(t *testing.T) {
+
+	initer := NewIniter()
+	p := NewPkgService(BaseService{
+		DB: initer.GetDB(),
+	})
+	n, err := p.LoadAppList()
+	if err != nil {
+		if !errors.Is(err, ErrLoadAppNotExist) {
+			t.Fatal(err)
+		}
+	}
+	log.Printf("%+v", n[0])
 }

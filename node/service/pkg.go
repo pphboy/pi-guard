@@ -16,6 +16,10 @@ import (
 	"gorm.io/gorm"
 )
 
+var (
+	ErrLoadAppNotExist = errors.New("load app not existing")
+)
+
 func NewPkgService(bs BaseService) *pkgService {
 	return &pkgService{
 		BaseService: bs,
@@ -35,10 +39,32 @@ type pkgService struct {
 }
 
 // 加载应用列表
-func (p *pkgService) LoadAppList() {
-	// 加载 /pg/app 路径中所有的应用
+func (p *pkgService) LoadAppList() (narr []*models.NodeApp, err error) {
 	// 加载 app数据库的记录即可
+	// 然后去/pg/app文件中拿数据，看数据是否存在
+	// 加载 /pg/app 路径中所有的应用
 	// 随带去验证一下，目录下的app是否存在
+
+	as, err := p.appDao.GetAll()
+	if err != nil {
+		return nil, err
+	}
+	var noExist string
+	for _, v := range as {
+		appDir := fmt.Sprintf("%s/%s", sys.PgSite(sys.PG_APP).Path, v.NodeAppName)
+		if !IsDirExist(appDir) {
+			noExist = fmt.Sprintf("%s\n[%v/%v, don't have exec file]",
+				noExist, v.NodeAppId, v.NodeAppName)
+			continue
+		}
+		narr = append(narr, v)
+	}
+
+	if len(noExist) > 0 {
+		return narr, fmt.Errorf("%w, %s", ErrLoadAppNotExist, noExist)
+	}
+
+	return narr, nil
 }
 
 // 卸载应用
