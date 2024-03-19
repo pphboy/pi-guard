@@ -26,6 +26,9 @@ type PkgConfig struct {
 	Type  PkgType
 	Hash  string
 	Port  string
+	// 应用下可执行文件名即可，不要使用 ./run.sh , 正确是 run.sh
+	Exec    string
+	Version *int
 }
 
 type Config struct {
@@ -50,6 +53,15 @@ func LoadPackageConfig(filepath string) (cfg *Config, err error) {
 }
 
 func PackPkg(cfg *Config, dir string) (err error) {
+	if cfg.Version == nil {
+		return fmt.Errorf("option version is not set")
+	}
+	execFile := path.Join(dir, cfg.Exec)
+	log.Println("Exec:", execFile)
+	if !IsFileExist(execFile) {
+		return fmt.Errorf("file don't have exec file,%w", os.ErrNotExist)
+	}
+
 	cmd := exec.Command("tar", "-zcvf",
 		fmt.Sprintf("%s.pkg", cfg.Name), "-C", dir, ".")
 

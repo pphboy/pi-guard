@@ -20,8 +20,14 @@ var (
 	ErrLoadAppNotExist = errors.New("load app not existing")
 )
 
-func NewPkgService(bs BaseService) *pkgService {
-	return &pkgService{
+type PkgService interface {
+	LoadAppList() (narr []*models.NodeApp, err error)
+	UninstallApp(np *models.NodeApp) error
+	InstallApp(pc *models.PiCloudApp) error
+}
+
+func NewPkgService(bs BaseService) PkgService {
+	return &pkgServiceImpl{
 		BaseService: bs,
 		appDao: &dao.AppDaoImpl{
 			Db: bs.DB,
@@ -32,14 +38,14 @@ func NewPkgService(bs BaseService) *pkgService {
 	}
 }
 
-type pkgService struct {
+type pkgServiceImpl struct {
 	BaseService
 	appDao dao.AppDao
 	sysDao dao.SysDao
 }
 
 // 加载应用列表
-func (p *pkgService) LoadAppList() (narr []*models.NodeApp, err error) {
+func (p *pkgServiceImpl) LoadAppList() (narr []*models.NodeApp, err error) {
 	// 加载 app数据库的记录即可
 	// 然后去/pg/app文件中拿数据，看数据是否存在
 	// 加载 /pg/app 路径中所有的应用
@@ -68,7 +74,7 @@ func (p *pkgService) LoadAppList() (narr []*models.NodeApp, err error) {
 }
 
 // 卸载应用
-func (p *pkgService) UninstallApp(np *models.NodeApp) error {
+func (p *pkgServiceImpl) UninstallApp(np *models.NodeApp) error {
 	// 关闭当前端口的应用
 	// 删除 /pg/app 路径中的应用，移动到 pg/.trash
 	oldPath := fmt.Sprintf("%s/%s", sys.PgSite(sys.PG_APP).Path, np.NodeAppName)
@@ -90,7 +96,7 @@ func (p *pkgService) UninstallApp(np *models.NodeApp) error {
 
 // 安装应用
 //   - 安装之前，需要判断一下版本，将原版本的删掉，改成新版本的
-func (p *pkgService) InstallApp(pc *models.PiCloudApp) error {
+func (p *pkgServiceImpl) InstallApp(pc *models.PiCloudApp) error {
 	existApp, err := p.appDao.GetByName(pc.AppName)
 	if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
 		return fmt.Errorf("app dao get by name,%w", err)
