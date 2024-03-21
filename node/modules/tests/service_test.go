@@ -14,10 +14,9 @@ import (
 )
 
 func TestRunnerApp(t *testing.T) {
-	ra := modules.RunnerApp{
-		Cmd: exec.Command("./pghttp"),
-		App: &models.NodeApp{},
-	}
+
+	ra := modules.NewRunnerApp(exec.Command("./pghttp"),
+		&models.NodeApp{})
 
 	var wg sync.WaitGroup
 
