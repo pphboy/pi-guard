@@ -15,15 +15,22 @@ var (
 
 type ServiceManager interface {
 	GetServices() []RunAppService
-	GetServiceByApp(*models.NodeApp) RunAppService
-	AddServices(RunAppService)
+	GetServiceByApp(*models.NodeApp) (RunAppService, error)
+	AddService(RunAppService)
+	GetRunning() []RunAppService
+	GetClosed() []RunAppService
 }
 
 type RunAppService interface {
 	Start() error
-	Stop() error
+	Close() error
 	Restart() error
 	Equal(*models.NodeApp) bool
+	IsRunning() bool
+}
+
+func NewAppDirector() ServiceManager {
+	return &AppDirector{}
 }
 
 type AppDirector struct {
@@ -31,9 +38,30 @@ type AppDirector struct {
 	mutex    sync.Mutex
 }
 
-func (a *AppDirector) GetServices() []RunAppService {
-	return nil
+func (a *AppDirector) GetRunning() []RunAppService {
+	var appList []RunAppService
+	for _, v := range a.services {
+		if v.IsRunning() {
+			appList = append(appList, v)
+		}
+	}
+	return appList
 }
+
+func (a *AppDirector) GetClosed() []RunAppService {
+	var appList []RunAppService
+	for _, v := range a.services {
+		if !v.IsRunning() {
+			appList = append(appList, v)
+		}
+	}
+	return appList
+}
+
+func (a *AppDirector) GetServices() []RunAppService {
+	return a.services
+}
+
 func (a *AppDirector) GetServiceByApp(e *models.NodeApp) (RunAppService, error) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
@@ -47,11 +75,12 @@ func (a *AppDirector) GetServiceByApp(e *models.NodeApp) (RunAppService, error) 
 	return nil, ErrNodeAppNotInService
 }
 
-func (a *AppDirector) AddServices(app RunAppService) {
+func (a *AppDirector) AddService(app RunAppService) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-
 	a.services = append(a.services, app)
+
+	go app.Start()
 }
 
 func NewRunnerApp(cmd *exec.Cmd, app *models.NodeApp) RunAppService {
@@ -62,21 +91,31 @@ func NewRunnerApp(cmd *exec.Cmd, app *models.NodeApp) RunAppService {
 }
 
 type RunnerApp struct {
-	cmd     *exec.Cmd
-	app     *models.NodeApp
-	reMutex sync.Mutex
+	cmd       *exec.Cmd
+	app       *models.NodeApp
+	reMutex   sync.Mutex
+	runStatus bool
 }
 
 func (r *RunnerApp) Start() error {
+	r.runStatus = true
+
 	go func() {
 		if err := r.cmd.Run(); err != nil {
 			logrus.Errorf("App:%s, Cmd:%s, Err: %v ", r.app.NodeAppName, r.cmd.String(), err)
+			r.runStatus = false
 		}
 	}()
 	return nil
 }
 
-func (r *RunnerApp) Stop() error {
+func (r *RunnerApp) Close() error {
+	defer func() {
+		r.reMutex.Lock()
+		defer r.reMutex.Unlock()
+
+		r.runStatus = false
+	}()
 	if err := r.cmd.Process.Kill(); err != nil {
 		return err
 	}
@@ -95,4 +134,11 @@ func (r *RunnerApp) Restart() error {
 
 func (r *RunnerApp) Equal(e *models.NodeApp) bool {
 	return r.app.NodeAppId == e.NodeAppId
+}
+
+func (r *RunnerApp) IsRunning() bool {
+	r.reMutex.Lock()
+	defer r.reMutex.Unlock()
+
+	return r.runStatus
 }
