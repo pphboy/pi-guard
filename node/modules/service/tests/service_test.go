@@ -3,7 +3,7 @@ package tests
 import (
 	"context"
 	"go-node/models"
-	"go-node/modules"
+	"go-node/modules/service"
 	"io"
 	"log"
 	"net/http"
@@ -33,7 +33,7 @@ func gg() (string, error) {
 
 func TestRunnerApp(t *testing.T) {
 
-	ra := modules.NewRunnerApp(exec.Command("./pghttp"),
+	ra := service.NewRunnerApp(exec.Command("./pghttp"),
 		&models.NodeApp{})
 
 	var wg sync.WaitGroup
@@ -107,7 +107,7 @@ func TestRunnerApp(t *testing.T) {
 
 func TestServiceManager(t *testing.T) {
 	t.Log("黄帝崩，藏桥山")
-	mg := modules.NewAppDirector()
+	mg := service.NewAppDirector()
 
 	var wg sync.WaitGroup
 
@@ -118,7 +118,7 @@ func TestServiceManager(t *testing.T) {
 
 	ee := exec.Command("./pghttp")
 
-	appSer := modules.NewRunnerApp(ee, na)
+	appSer := service.NewRunnerApp(ee, na)
 	mg.AddService(appSer)
 
 	ctx, cancel := context.WithCancel(context.Background())
