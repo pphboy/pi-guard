@@ -14,6 +14,12 @@ type AppDao interface {
 	GetByName(name string) (*models.NodeApp, error)
 }
 
+func NewAppDao(db *gorm.DB) AppDao {
+	return &AppDaoImpl{
+		Db: db,
+	}
+}
+
 type AppDaoImpl struct {
 	Db *gorm.DB
 }

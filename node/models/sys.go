@@ -22,7 +22,7 @@ import (
 type NodeSys struct {
 	NodeId     string     `gorm:"column:NODE_ID;primaryKey;" json:"NodeId"` //type:string       comment:                             version:2024-02-16 19:36
 	NodeName   string     `gorm:"column:NODE_NAME" json:"NodeName"`         //type:string       comment:                             version:2024-02-16 19:36
-	NodeStatus *int       `gorm:"column:NODE_STATUS" json:"NodeStatus"`     //type:*int         comment:running=1,stop=0,error=-1    version:2024-02-16 19:36
+	NodeStatus int       `gorm:"column:NODE_STATUS" json:"NodeStatus"`     //type:*int         comment:running=1,stop=0,error=-1    version:2024-02-16 19:36
 	NodeDomain string     `gorm:"column:NODE_DOMAIN" json:"NodeDomain"`     //type:string       comment:                             version:2024-02-17 16:32
 	CreatedAt  *time.Time `gorm:"column:CREATED_AT" json:"CreatedAt"`       //type:*time.Time   comment:创建时间                     version:2024-02-16 19:36
 	UpdatedAt  *time.Time `gorm:"column:UPDATED_AT" json:"UpdatedAt"`       //type:*time.Time   comment:更新时间                     version:2024-02-16 19:36

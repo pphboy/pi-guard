@@ -11,15 +11,13 @@ import (
 )
 
 type Initer interface {
-	InitBase()
+	initBase(string)
 	GetDB() *gorm.DB
 }
 
-func NewIniter() Initer {
+func NewIniter(base string) Initer {
 	i := &InitService{}
-
-	i.InitBase()
-
+	i.initBase(base)
 	return i
 }
 
@@ -28,14 +26,14 @@ type InitService struct {
 }
 
 // 初始化基础
-func (i *InitService) InitBase() {
+func (i *InitService) initBase(base string) {
 	logrus.Print("initer base")
-	i.initializeDefaultPath()
+	i.initializeDefaultPath(base)
 }
 
 // 初始化路径
-func (i *InitService) initializeDefaultPath() {
-	siter := NewSiter(gsys.GetPgSites())
+func (i *InitService) initializeDefaultPath(base string) {
+	siter := NewSiter(gsys.GetPgSites(base))
 	siter.InitNodeSysPath()
 }
 

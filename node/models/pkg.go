@@ -24,7 +24,7 @@ type NodeApp struct {
 	NodeAppIntro   string     `gorm:"column:NODE_APP_INTRO" json:"NodeAppIntro"`       //type:string       comment:应用介绍                                       version:2024-02-16 19:38
 	NodeAppPort    string     `gorm:"column:NODE_APP_PORT" json:"NodeAppPort"`         //type:string       comment:应用端口                                       version:2024-02-16 19:38
 	NodeAppDomain  string     `gorm:"column:NODE_APP_DOMAIN" json:"NodeAppDomain"`     //type:string       comment:应用访问地址                                   version:2024-02-16 19:38
-	NodeAppStatus  *int       `gorm:"column:NODE_APP_STATUS" json:"NodeAppStatus"`     //type:*int         comment:活动状态;running=1,stop=0,error=-1,unheal=-2   version:2024-02-16 19:38
+	NodeAppStatus  int        `gorm:"column:NODE_APP_STATUS" json:"NodeAppStatus"`     //type:*int         comment:活动状态;running=1,stop=0,error=-1,unheal=-2   version:2024-02-16 19:38
 	NodeAppVersion int        `gorm:"column:NODE_APP_VERSION" json:"NodeAppVersion"`   //type:*int         comment:版本                                           version:2024-02-17 16:22
 	CreatedAt      *time.Time `gorm:"column:CREATED_AT" json:"CreatedAt"`              //type:*time.Time   comment:创建时间                                       version:2024-02-16 19:38
 	DeletedAt      *time.Time `gorm:"column:DELETED_AT" json:"DeletedAt"`              //type:*time.Time   comment:删除时间                                       version:2024-02-16 19:38

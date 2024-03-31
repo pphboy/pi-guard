@@ -10,7 +10,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	pglib "pglib"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -128,13 +130,17 @@ func (p *pkgServiceImpl) InstallApp(pc *models.PiCloudApp) error {
 
 	tempPkgFile.Write(buf)
 	tempPkgFile.Close()
-	// 解压到 tmp文件中，然后读取 config
 	// real install site
 	appSite := fmt.Sprintf("%s/%s", sys.PgSite(sys.PG_APP).Path,
 		pc.AppName)
 
 	// 拿到pkg.toml的信息之后，再将包解压到/pkg/app/xx
 	pglib.UnpackPkg(tempPkgFile.Name(), appSite)
+	// 解压到 tmp文件中，然后读取 config
+	cfg, err := pglib.LoadPackageConfig(filepath.Join(appSite, pglib.PKGFILE_NAME))
+	if err != nil {
+		return err
+	}
 
 	// 启动成功之后，将 应用的记录，添加到 数据库中，如果已存在该app的版本，则修改版本号
 	logrus.Println("add to db")
@@ -151,9 +157,11 @@ func (p *pkgServiceImpl) InstallApp(pc *models.PiCloudApp) error {
 		p.appDao.Create(&models.NodeApp{
 			NodeAppId:     tool.GetUUIDUpper(),
 			NodeAppType:   &models.APP_NORM,
-			NodeAppName:   pc.AppName,
-			NodeAppIntro:  pc.AppIntro,
-			NodeAppDomain: nodeInfo.GetAppDomain(pc.AppName), // 基于此结点的根域名的，扩展子应用 app.node.pi.g
+			NodeAppName:   cfg.Name,
+			NodeAppPort:   cfg.Port,
+			NodeAppStatus: 0,
+			NodeAppIntro:  cfg.Intro,
+			NodeAppDomain: nodeInfo.GetAppDomain(strings.ToLower(cfg.Name)), // 基于此结点的根域名的，扩展子应用 app.node.pi.g
 		})
 	}
 

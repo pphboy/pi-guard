@@ -57,7 +57,7 @@ func TestFileS(t *testing.T) {
 }
 
 func TestPkgInstall(t *testing.T) {
-	initer := service.NewIniter()
+	initer := service.NewIniter("../../fs_root")
 
 	p := service.NewPkgService(service.BaseService{
 		DB: initer.GetDB(),
@@ -70,7 +70,7 @@ func TestPkgInstall(t *testing.T) {
 	go func() {
 
 		if err := p.InstallApp(&models.PiCloudApp{
-			AppName:    "pghttp",
+			AppName:    "PgHttp",
 			AppVersion: 2,
 			AppId:      "UUID_123",
 			AppSite:    "http://127.1:8081/PgHttp_v2.pkg",
@@ -79,7 +79,7 @@ func TestPkgInstall(t *testing.T) {
 		}
 
 		if err := p.InstallApp(&models.PiCloudApp{
-			AppName:    "pghttp",
+			AppName:    "PgHttp",
 			AppVersion: 3,
 			AppId:      "UUID_123",
 			AppSite:    "http://127.1:8081/PgHttp_v3.pkg",
@@ -94,13 +94,13 @@ func TestPkgInstall(t *testing.T) {
 }
 
 func TestUninstallApp(t *testing.T) {
-	initer := service.NewIniter()
+	initer := service.NewIniter("../../fs_root")
 	p := service.NewPkgService(service.BaseService{
 		DB: initer.GetDB(),
 	})
 
 	if err := p.UninstallApp(&models.NodeApp{
-		NodeAppId:   "412D49368D6C41368A5ADAA9D377BB68",
+		NodeAppId:   "F50856F1B64A49819B81FB21F0FF39F1",
 		NodeAppName: "pghttp",
 	}); err != nil {
 		t.Fatal("uninstall app", err)
@@ -110,7 +110,7 @@ func TestUninstallApp(t *testing.T) {
 
 func TestLoadAppList(t *testing.T) {
 
-	initer := service.NewIniter()
+	initer := service.NewIniter("../../fs_root")
 	p := service.NewPkgService(service.BaseService{
 		DB: initer.GetDB(),
 	})

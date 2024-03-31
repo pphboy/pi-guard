@@ -6,7 +6,5 @@ import (
 
 func main() {
 	// pgl.Config
-
 	logrus.Println("Hello World")
-
 }

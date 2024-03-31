@@ -3,19 +3,24 @@ package sys
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 )
+
+const (
+	ROOT_DOMAIN = "pi.g"
+)
+
+var BASE_DIR = ""
 
 type PgSysSite struct {
 	Path string
 	Name string
 }
 
-var pgSites []PgSysSite
-
-func init() {
-	root := "./pg"
-	// 初始化，目录这些
-	pgSites = []PgSysSite{
+func GetPgSites(base string) []PgSysSite {
+	BASE_DIR = base
+	root := filepath.Join(base, "pg")
+	pgSites := []PgSysSite{
 		{
 			Path: root,
 			Name: "Node Root Path",
@@ -41,9 +46,6 @@ func init() {
 			Name: "Node Trash Path",
 		},
 	}
-}
-
-func GetPgSites() []PgSysSite {
 	return pgSites
 }
 
@@ -59,6 +61,7 @@ const (
 )
 
 func PgSite(tp TypePg) PgSysSite {
+	pgSites := GetPgSites(BASE_DIR)
 	return pgSites[tp]
 }
 
