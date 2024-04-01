@@ -96,3 +96,17 @@ func TestMemUsage(t *testing.T) {
 	select {}
 
 }
+
+func TestNet(t *testing.T) {
+	i, _ := net.IOCounters(false)
+	t.Log(len(i))
+	i, _ = net.IOCounters(true)
+	t.Log(len(i))
+}
+
+func TestMonitorPacket(t *testing.T) {
+	m := models.MonitorPacket{}
+	o, _ := m.Marshal()
+	t.Logf("%s", o)
+
+}
