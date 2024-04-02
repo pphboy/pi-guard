@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"go-node/models"
+	"go-node/service"
 	"log"
 	"testing"
 	"time"
@@ -109,4 +110,11 @@ func TestMonitorPacket(t *testing.T) {
 	o, _ := m.Marshal()
 	t.Logf("%s", o)
 
+}
+
+func TestMonitor(t *testing.T) {
+	nm := service.NewNodeMonitor(1600, 1*time.Second)
+	nm.Send(func(mp *models.MonitorPacket) {
+		log.Println(mp)
+	})
 }
