@@ -83,6 +83,7 @@ func (a *AppDirector) AddService(app RunAppService) {
 	go app.Start()
 }
 
+// cmd 运行命令，app 为 app的安装信息
 func NewRunnerApp(cmd *exec.Cmd, app *models.NodeApp) RunAppService {
 	return &RunnerApp{
 		cmd: cmd,

@@ -113,8 +113,18 @@ func TestMonitorPacket(t *testing.T) {
 }
 
 func TestMonitor(t *testing.T) {
-	nm := service.NewNodeMonitor(1600, 1*time.Second)
+	nm := service.NewNodeMonitor(1600, 1*time.Second, func(mp []*models.MonitorPacket) {
+		log.Print(mp)
+	})
 	nm.Send(func(mp *models.MonitorPacket) {
 		log.Println(mp)
 	})
+}
+
+func TestNilArr(t *testing.T) {
+	var a []int
+
+	a = nil
+	a = append(a, 1)
+	t.Log(a)
 }

@@ -18,16 +18,19 @@ type NodeMonitor interface {
 	HttpHandle(http.ResponseWriter, *http.Request)
 }
 
-func NewNodeMonitor(maxSave int, gap time.Duration) NodeMonitor {
+func NewNodeMonitor(maxSave int, gap time.Duration, outinfo func([]*models.MonitorPacket)) NodeMonitor {
 	return &NodeMonitorImplV1{
-		gap:     gap,
-		maxSave: maxSave,
+		gap:       gap,
+		maxSave:   maxSave,
+		outinfoFn: outinfo,
 	}
 }
 
 type NodeMonitorImplV1 struct {
-	gap     time.Duration
-	maxSave int
+	gap       time.Duration
+	maxSave   int
+	outArr    []*models.MonitorPacket
+	outinfoFn func([]*models.MonitorPacket)
 }
 
 func (n *NodeMonitorImplV1) Send(recv func(*models.MonitorPacket)) {
@@ -41,12 +44,15 @@ func (n *NodeMonitorImplV1) Send(recv func(*models.MonitorPacket)) {
 				continue
 			}
 
+			n.outArr = append(n.outArr, p)
 			recv(p)
 			count++
 		}
 		if count == n.maxSave {
 			// 保存到数据库中
 			logrus.Print("save to db")
+			n.outinfoFn(n.outArr)
+			n.outArr = nil
 		}
 	}
 }
