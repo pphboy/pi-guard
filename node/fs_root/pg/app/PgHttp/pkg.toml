@@ -1,8 +1,8 @@
 [PkgConfig]
 Name = "PgHttp"
-Intro = "PgHttp_v3"
+Intro = "PgHttp_v4"
 Type = "NORM"
 Hash = ""
 Port = 8081
-Exec = "run.sh"
-Version = 3
+Exec = "pghttp"
+Version = 4

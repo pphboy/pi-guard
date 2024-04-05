@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 var (
@@ -84,29 +85,37 @@ func (a *AppDirector) AddService(app RunAppService) {
 }
 
 // cmd 运行命令，app 为 app的安装信息
-func NewRunnerApp(cmd *exec.Cmd, app *models.NodeApp) RunAppService {
+func NewRunnerApp(cmd *exec.Cmd, app *models.NodeApp, db *gorm.DB) RunAppService {
 	return &RunnerApp{
 		cmd: cmd,
 		app: app,
+		db:  db,
 	}
 }
 
 type RunnerApp struct {
 	cmd       *exec.Cmd
+	db        *gorm.DB
 	app       *models.NodeApp
 	reMutex   sync.Mutex
 	runStatus bool
 }
 
 func (r *RunnerApp) Start() error {
+	logrus.Print("booting ", r.app.NodeAppDomain)
 	r.runStatus = true
 
 	go func() {
 		if err := r.cmd.Run(); err != nil {
 			logrus.Errorf("App:%s, Cmd:%s, Err: %v ", r.app.NodeAppName, r.cmd.String(), err)
 			r.runStatus = false
+			// 即使 变成 error，也可以尝试去启动
+			r.setStatus(models.STATUS_ERROR)
 		}
 	}()
+
+	r.setStatus(models.STATUS_RUNNING)
+
 	return nil
 }
 
@@ -123,6 +132,8 @@ func (r *RunnerApp) Close() error {
 	if err := r.cmd.Process.Release(); err != nil {
 		return err
 	}
+
+	r.setStatus(models.STATUS_STOP)
 	return nil
 }
 
@@ -142,4 +153,12 @@ func (r *RunnerApp) IsRunning() bool {
 	defer r.reMutex.Unlock()
 
 	return r.runStatus
+}
+
+func (r *RunnerApp) setStatus(status int) error {
+	r.app.NodeAppStatus = status
+	if err := r.db.Where("NODE_APP_ID = ?", r.app.NodeAppId).Updates(r.app).Error; err != nil {
+		return err
+	}
+	return nil
 }

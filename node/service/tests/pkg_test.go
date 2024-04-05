@@ -87,6 +87,15 @@ func TestPkgInstall(t *testing.T) {
 			log.Println("err,", err)
 		}
 
+		if err := p.InstallApp(&models.PiCloudApp{
+			AppName:    "PgHttp",
+			AppVersion: 4,
+			AppId:      "UUID_123",
+			AppSite:    "http://127.1:8081/PgHttp_v4.pkg",
+		}); err != nil {
+			log.Println("err,", err)
+		}
+
 		wg.Done()
 	}()
 

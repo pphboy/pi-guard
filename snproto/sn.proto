@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+
+option go_package = "snproto";
+import "google/protobuf/any.proto";
+
+
+package snproto;
+
+
+// 性能接口
+service Monitor {
+    rpc GetInfoPacket() return (MonitorPacket);
+}
+
+
+message MonitorPacket {
+    repeated google.protobuf.Any Memory = 1;
+    repeated google.protobuf.Any Cpu = 2;
+    repeated double CpuUsage = 3;
+    repeated google.protobuf.Any Net = 4;
+}
+
+
