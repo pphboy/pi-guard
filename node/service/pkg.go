@@ -80,7 +80,9 @@ func (p *pkgServiceImpl) UninstallApp(np *models.NodeApp) error {
 	// 关闭当前端口的应用
 	// 删除 /pg/app 路径中的应用，移动到 pg/.trash
 	oldPath := fmt.Sprintf("%s/%s", sys.PgSite(sys.PG_APP).Path, np.NodeAppName)
-	newPath := fmt.Sprintf("%s/%s_%s", sys.PgSite(sys.PG_TRASH).Path, np.NodeAppName, tool.GetUUIDUpper())
+	// !! FIXME: 删除是不会删除的，只是RENAME一下，数据永久存在
+	newPath := fmt.Sprintf("%s/%s_%s", sys.PgSite(sys.PG_TRASH).Path,
+		np.NodeAppName, tool.GetUUIDUpper())
 	logrus.Printf("move to pg/.trash\noldPath:%s\nnewPath:%s\n", oldPath, newPath)
 	if err := os.Rename(oldPath, newPath); err != nil {
 		return fmt.Errorf("uninstall app, %w", err)

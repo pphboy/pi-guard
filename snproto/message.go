@@ -1,0 +1,8 @@
+package snproto
+
+const (
+	DB_DELETE_SUCCEED = 1
+	DB_UPDATE_SUCCEED = 2
+	DB_DELETE_ERROR   = -10
+	DB_UPDATE_ERROR   = -11
+)

@@ -14,31 +14,44 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Node interface {
+type NodeBoot interface {
 	Init()
+	Install() error
 	initService() error
 	initGrpcServer() error
 }
 
-type NodeImpl struct {
+type NodeBootImpl struct {
 	pkgService     gs.PkgService
 	serviceManager ns.ServiceManager
 	baseService    gs.BaseService
 	reverseProxy   rproxy.ReverseProxy
+	sysService     gs.SysService
 	port           string
+	grpcPort       string
+	nodeName       string
 }
 
-func NewNode(bs gs.BaseService, port string) Node {
-	return &NodeImpl{
+func NewNode(bs gs.BaseService, port string, gp string, nodeName string) NodeBoot {
+
+	n := &NodeBootImpl{
 		baseService:    bs,
 		pkgService:     gs.NewPkgService(bs),
 		serviceManager: ns.NewAppDirector(),
 		reverseProxy:   rproxy.NewRProxyer(bs),
+		grpcPort:       gp,
 		port:           port,
+		nodeName:       nodeName,
+		sysService:     gs.NewSysService(bs),
 	}
+
+	// 安装node结点
+	n.Install()
+
+	return n
 }
 
-func (n *NodeImpl) Init() {
+func (n *NodeBootImpl) Init() {
 	if err := n.initService(); err != nil {
 		logrus.Fatal("init service", err)
 	}
@@ -50,7 +63,7 @@ func (n *NodeImpl) Init() {
 }
 
 // service manager
-func (n *NodeImpl) initService() error {
+func (n *NodeBootImpl) initService() error {
 	logrus.Info("init service")
 
 	if err := n.loadAppInfo(); err != nil {
@@ -60,7 +73,7 @@ func (n *NodeImpl) initService() error {
 	return nil
 }
 
-func (n *NodeImpl) loadAppInfo() error {
+func (n *NodeBootImpl) loadAppInfo() error {
 	apps, err := n.pkgService.LoadAppList()
 
 	if err != nil {
@@ -97,7 +110,7 @@ func (n *NodeImpl) loadAppInfo() error {
 	return nil
 }
 
-func (n *NodeImpl) startReverseHttp() {
+func (n *NodeBootImpl) startReverseHttp() {
 	logrus.Info("start reverse http")
 	m := http.ServeMux{}
 
@@ -112,7 +125,13 @@ func (n *NodeImpl) startReverseHttp() {
 }
 
 // 初始化grpc服务
-func (n *NodeImpl) initGrpcServer() error {
+func (n *NodeBootImpl) initGrpcServer() error {
 
 	return nil
+}
+
+// 初始化grpc服务
+func (n *NodeBootImpl) Install() error {
+	// 直接安装，无所谓，反正只能安装一次
+	return n.sysService.Install(n.nodeName)
 }

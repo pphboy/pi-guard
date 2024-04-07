@@ -1,24 +1,97 @@
 syntax = "proto3";
 
-
-option go_package = "snproto";
+option go_package = "piguard/snproto";
 import "google/protobuf/any.proto";
-
+import "google/protobuf/timestamp.proto";
 
 package snproto;
 
-
 // 性能接口
-service Monitor {
-    rpc GetInfoPacket() return (MonitorPacket);
+service MonitorService {
+    rpc GetInfoPacket(Empty) returns (MonitorPacket){}
+}
+
+// 结点控制: 结点重启，结点日志，结点信息（结点域名，结点状态）
+// 结点貌似没法关闭，要关闭和重启，确实要再来一个附加的程序
+service NodeService{
+    rpc GetNodeInfo(Empty) returns(NodeSys) {}
+    // 关闭，理论上来说，关闭之后就再也打不开了，
+    rpc Shutdown(Empty) returns(Empty) {}
+    // reboot的作用应该是重启服务器j
+    rpc Reboot(Empty) returns(Empty) {}
+}
+
+// 安装：安装应用，获取已安装应用列表
+// 服务管理：对应用进行启动关闭的操作
+service NodeAppService{
+    rpc LoadAppList(Empty) returns (NodeAppArray) {}
+
+    rpc UninstallApp(NodeAppInfo) returns (Result){}
+
+    rpc InstallApp(PiCloudApp) returns (Result){}
+
+    rpc Stop(NodeAppInfo) returns (Result){}
+
+    rpc Restart(NodeAppInfo) returns (Result){}
+}
+
+message NodeAppArray {
+    repeated google.protobuf.Any values = 1;
+}
+
+// TODO: 写好对应Message
+message NodeAppInfo {
+	string NodeAppId  = 1;
+	string NodeId     =2;
+	int32 NodeAppType    =3;
+	string NodeAppName   =4;
+	string NodeAppIntro    =5;
+	string NodeAppPort     =6;
+	string NodeAppDomain   = 7;
+	int32 NodeAppStatus   =8;
+	int32 NodeAppVersion  = 9;
+	google.protobuf.Timestamp CreatedAt      = 10;
+	google.protobuf.Timestamp DeletedAt       = 11;
+	google.protobuf.Timestamp UpdatedAt       = 12;
+
+}
+
+message PiCloudApp {
+	string AppId       =1;
+	string AppName    =2;
+	string AppIntro    =3;
+	string AppManual =4;
+	int32 AppVersion =5;
+	string AppSite    =6;
+	string AppHistory =7;
+    google.protobuf.Timestamp CreatedAt  =8;
+    google.protobuf.Timestamp UpdatedAt  =9;
+    google.protobuf.Timestamp DeletedAt  =10;
 }
 
 
+message NodeSys {
+	string NodeId     = 1;
+	string NodeName    = 2;
+	int32 NodeStatus  =3;
+	string  NodeDomain =4;
+	google.protobuf.Timestamp CreatedAt   = 5;
+	google.protobuf.Timestamp UpdatedAt   =6;
+	google.protobuf.Timestamp DeletedAt  =7;
+}
+
+message Empty{}
+
+message Result {
+    string Message = 1;
+    int32 Code = 2;
+    google.protobuf.Any  Data = 3;
+}
+
+// 监控的包
 message MonitorPacket {
-    repeated google.protobuf.Any Memory = 1;
+    google.protobuf.Any Memory = 1;
     repeated google.protobuf.Any Cpu = 2;
-    repeated double CpuUsage = 3;
-    repeated google.protobuf.Any Net = 4;
+    double CpuUsage = 3;
+    google.protobuf.Any Net = 4;
 }
-
-
