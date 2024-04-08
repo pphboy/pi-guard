@@ -24,6 +24,8 @@ type NodeRpcService struct {
 	monitor service.NodeMonitor
 	pkg     service.PkgService
 	sys     service.SysService
+	// 这里还需要扩展一个nodeApp serviceManager
+	// 看是将Node放到这里还是将其他的内容放到这里
 }
 
 func NewNodeRpcService(bs service.BaseService) *NodeRpcService {
@@ -100,8 +102,21 @@ func (n *NodeRpcService) UninstallApp(ctx context.Context, na *sp.NodeAppInfo) (
 		Data:    ad,
 	}, nil
 }
-func (n *NodeRpcService) InstallApp(context.Context, *sp.PiCloudApp) (*sp.Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InstallApp not implemented")
+func (n *NodeRpcService) InstallApp(ctx context.Context, spc *sp.PiCloudApp) (*sp.Result, error) {
+	pc := &models.PiCloudApp{}
+	if err := n.pkg.InstallApp(pc.ResolveGrpcMsg(spc)); err != nil {
+		return nil, err
+	}
+
+	sa, err := anypb.New(spc)
+	if err != nil {
+		return nil, err
+	}
+	return &sp.Result{
+		Code:    snproto.DB_DELETE_SUCCEED,
+		Message: fmt.Sprintf("安装[%s]{%s}应用成功", spc.AppId, spc.AppName),
+		Data:    sa,
+	}, nil
 }
 func (n *NodeRpcService) Stop(context.Context, *sp.NodeAppInfo) (*sp.Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
