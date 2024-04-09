@@ -2,9 +2,12 @@ package nodegrpc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"go-node/models"
-	"go-node/service"
+	"go-node/modules/service"
+	gs "go-node/service"
+	"go-node/tool"
 	"snproto"
 	sp "snproto"
 	"time"
@@ -21,20 +24,23 @@ type NodeRpcService struct {
 	sp.UnimplementedNodeAppServiceServer
 	sp.UnimplementedNodeServiceServer
 
-	monitor service.NodeMonitor
-	pkg     service.PkgService
-	sys     service.SysService
+	monitor gs.NodeMonitor
+	pkg     gs.PkgService
+	sys     gs.SysService
 	// 这里还需要扩展一个nodeApp serviceManager
-	// 看是将Node放到这里还是将其他的内容放到这里
+	//看是将Node放到这里还是将其他的内容放到这里
+	sm service.ServiceManager
 }
 
-func NewNodeRpcService(bs service.BaseService) *NodeRpcService {
+// serviceManager属于核心模块，不能直接new
+func NewNodeRpcService(sm service.ServiceManager, bs gs.BaseService) *NodeRpcService {
 	return &NodeRpcService{
-		monitor: service.NewNodeMonitor(1600, 10*time.Second, func(mp []*models.MonitorPacket) {
+		monitor: gs.NewNodeMonitor(1600, 10*time.Second, func(mp []*models.MonitorPacket) {
 			logrus.Printf("monitor packet,%+v", mp)
 		}),
-		pkg: service.NewPkgService(bs),
-		sys: service.NewSysService(bs),
+		pkg: gs.NewPkgService(bs),
+		sys: gs.NewSysService(bs),
+		sm:  sm,
 	}
 }
 
@@ -102,6 +108,7 @@ func (n *NodeRpcService) UninstallApp(ctx context.Context, na *sp.NodeAppInfo) (
 		Data:    ad,
 	}, nil
 }
+
 func (n *NodeRpcService) InstallApp(ctx context.Context, spc *sp.PiCloudApp) (*sp.Result, error) {
 	pc := &models.PiCloudApp{}
 	if err := n.pkg.InstallApp(pc.ResolveGrpcMsg(spc)); err != nil {
@@ -118,16 +125,57 @@ func (n *NodeRpcService) InstallApp(ctx context.Context, spc *sp.PiCloudApp) (*s
 		Data:    sa,
 	}, nil
 }
-func (n *NodeRpcService) Stop(context.Context, *sp.NodeAppInfo) (*sp.Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+
+func (n *NodeRpcService) Stop(ctx context.Context, nai *sp.NodeAppInfo) (*sp.Result, error) {
+	ra, err := n.sm.GetServiceByApp(tool.ConvertRpcInfoToNodeInfo(nai))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ra.Close(); err != nil {
+		return nil, err
+	}
+
+	return &sp.Result{
+		Code:    snproto.APP_CLOSED_SUCCEED,
+		Message: fmt.Sprintf("关闭[%s]{%s}应用成功", nai.NodeAppId, nai.NodeAppName),
+		Data:    nil,
+	}, nil
 }
-func (n *NodeRpcService) Restart(context.Context, *sp.NodeAppInfo) (*sp.Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Restart not implemented")
+
+func (n *NodeRpcService) Restart(ctx context.Context, nai *sp.NodeAppInfo) (*sp.Result, error) {
+	ra, err := n.sm.GetServiceByApp(tool.ConvertRpcInfoToNodeInfo(nai))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ra.Restart(); err != nil {
+		return nil, err
+	}
+
+	return &sp.Result{
+		Code:    snproto.APP_RESTART_SUCCEED,
+		Message: fmt.Sprintf("重启[%s]{%s}应用成功", nai.NodeAppId, nai.NodeAppName),
+		Data:    nil,
+	}, nil
 }
 
 // monitorService
 func (n *NodeRpcService) GetInfoPacket(context.Context, *sp.Empty) (*sp.MonitorPacket, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetInfoPacket not implemented")
+	p, err := n.monitor.GetInfoPacket()
+	if err != nil {
+		return nil, err
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+
+	mp := &sp.MonitorPacket{
+		Json: string(b),
+	}
+
+	return mp, nil
 }
 
 func NewGrpcServer() {

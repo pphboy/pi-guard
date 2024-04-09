@@ -19,6 +19,7 @@ type NodeBoot interface {
 	Install() error
 	initService() error
 	initGrpcServer() error
+	GetServiceManager() ns.ServiceManager
 }
 
 type NodeBootImpl struct {
@@ -134,4 +135,8 @@ func (n *NodeBootImpl) initGrpcServer() error {
 func (n *NodeBootImpl) Install() error {
 	// 直接安装，无所谓，反正只能安装一次
 	return n.sysService.Install(n.nodeName)
+}
+
+func (n *NodeBootImpl) GetServiceManager() ns.ServiceManager {
+	return n.serviceManager
 }

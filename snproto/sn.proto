@@ -89,9 +89,14 @@ message Result {
 }
 
 // 监控的包
+// message MonitorPacket {
+//     google.protobuf.Any Memory = 1;
+//     repeated google.protobuf.Any Cpu = 2;
+//     double CpuUsage = 3;
+//     google.protobuf.Any Net = 4;
+// }
+
 message MonitorPacket {
-    google.protobuf.Any Memory = 1;
-    repeated google.protobuf.Any Cpu = 2;
-    double CpuUsage = 3;
-    google.protobuf.Any Net = 4;
+	// 只能自己去解析了 
+    string Json= 1;
 }
