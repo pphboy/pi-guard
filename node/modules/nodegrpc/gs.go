@@ -8,11 +8,14 @@ import (
 	"go-node/modules/service"
 	gs "go-node/service"
 	"go-node/tool"
+	"log"
+	"net"
 	"snproto"
 	sp "snproto"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -178,6 +181,21 @@ func (n *NodeRpcService) GetInfoPacket(context.Context, *sp.Empty) (*sp.MonitorP
 	return mp, nil
 }
 
-func NewGrpcServer() {
+func RunRpcServer(port int, ns snproto.RpcServer) {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		logrus.Fatalf("failed to listen %d", port)
+	}
 
+	s := grpc.NewServer()
+
+	snproto.RegisterMonitorServiceServer(s, ns)
+	snproto.RegisterNodeAppServiceServer(s, ns)
+	snproto.RegisterNodeServiceServer(s, ns)
+
+	logrus.Infof("listening at %v", lis.Addr())
+
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to server: %v", err)
+	}
 }

@@ -2,13 +2,16 @@ package node
 
 import (
 	"fmt"
+	"go-node/modules/nodegrpc"
 	"go-node/modules/rproxy"
 	ns "go-node/modules/service"
 	gs "go-node/service"
 	"go-node/sys"
 	"net/http"
+	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"pglib"
 
 	"github.com/sirupsen/logrus"
@@ -19,6 +22,7 @@ type NodeBoot interface {
 	Install() error
 	initService() error
 	initGrpcServer() error
+	initLog() error
 	GetServiceManager() ns.ServiceManager
 }
 
@@ -28,12 +32,12 @@ type NodeBootImpl struct {
 	baseService    gs.BaseService
 	reverseProxy   rproxy.ReverseProxy
 	sysService     gs.SysService
-	port           string
-	grpcPort       string
+	port           int
+	grpcPort       int
 	nodeName       string
 }
 
-func NewNode(bs gs.BaseService, port string, gp string, nodeName string) NodeBoot {
+func NewNode(bs gs.BaseService, port int, gp int, nodeName string) NodeBoot {
 
 	n := &NodeBootImpl{
 		baseService:    bs,
@@ -53,12 +57,20 @@ func NewNode(bs gs.BaseService, port string, gp string, nodeName string) NodeBoo
 }
 
 func (n *NodeBootImpl) Init() {
+	if err := n.initLog(); err != nil {
+		logrus.Fatal("init log, ", err)
+	}
+
 	if err := n.initService(); err != nil {
 		logrus.Fatal("init service", err)
 	}
-	if err := n.initGrpcServer(); err != nil {
-		logrus.Fatal("init grpc server", err)
-	}
+
+	go func() {
+		logrus.Print("running grpc server")
+		if err := n.initGrpcServer(); err != nil {
+			logrus.Fatal("init grpc server", err)
+		}
+	}()
 
 	n.startReverseHttp()
 }
@@ -119,7 +131,7 @@ func (n *NodeBootImpl) startReverseHttp() {
 
 	s := http.Server{
 		Handler: &m,
-		Addr:    fmt.Sprintf(":%s", n.port),
+		Addr:    fmt.Sprintf(":%d", n.port),
 	}
 
 	s.ListenAndServe()
@@ -127,7 +139,14 @@ func (n *NodeBootImpl) startReverseHttp() {
 
 // 初始化grpc服务
 func (n *NodeBootImpl) initGrpcServer() error {
+	defer func() {
+		if a := recover(); a != nil {
+			logrus.Infof("grpc server error: %v", a)
+		}
+	}()
 
+	ns := nodegrpc.NewNodeRpcService(n.serviceManager, n.baseService)
+	nodegrpc.RunRpcServer(n.grpcPort, ns)
 	return nil
 }
 
@@ -139,4 +158,18 @@ func (n *NodeBootImpl) Install() error {
 
 func (n *NodeBootImpl) GetServiceManager() ns.ServiceManager {
 	return n.serviceManager
+}
+
+func (n *NodeBootImpl) initLog() error {
+	nm := filepath.Join(sys.PgSite(sys.PG_LOGS).Path, fmt.Sprintf("%s_sys.log", n.nodeName))
+	logFile, err := os.OpenFile(nm, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+
+	logrus.SetOutput(logFile)
+	// above warn , can be log in file
+	logrus.SetLevel(logrus.WarnLevel)
+
+	return nil
 }
