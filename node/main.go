@@ -11,9 +11,9 @@ import (
 
 var (
 	rootDir  = flag.String("root", "./", "root data dir")
-	port     = flag.String("port", "80", "http server port")
+	port     = flag.Int("port", 80, "http server port")
 	nodeName = flag.String("name", tool.GetUUIDUpper(), "node name,default random uuid")
-	grpcPort = flag.String("grpcPort", "9981", "grpc server port")
+	grpcPort = flag.Int("grpcPort", 9981, "grpc server port")
 )
 
 func main() {
