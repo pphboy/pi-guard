@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package center;
+option go_package = "piguard/snproto/center";
+import "google/protobuf/timestamp.proto";
+
+// 用于连接Center，然后让Center连接自己
+// Node会重复去连这个雷达，连上之后就将Node的信息发给Center
+// Center则会连接到Node
+service CenterRadar{
+    rpc SendMe(NodeReaction) returns (CenterReaction){}
+}
+
+// 连接Node的信息
+message NodeReaction {
+  string Domain = 1; 
+  int32 Port = 2;
+}
+
+// Center需要核对是不是node_的Center
+message CenterReaction {
+  PiProject ProjectInfo = 1;
+}
+
+message PiProject{
+	int32  ProjectId      = 1;
+	string ProjectName    = 2;
+  string ProjectIntro   = 4;
+	int32  ProjectStatus  = 3;
+  google.protobuf.Timestamp CreatedAt = 5;
+  google.protobuf.Timestamp UpdatedAt = 6;
+  google.protobuf.Timestamp DeletedAt = 7;
+  string Domain = 8;
+  int32 Port  = 9;
+}
+
+

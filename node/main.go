@@ -14,6 +14,7 @@ var (
 	port     = flag.Int("port", 80, "http server port")
 	nodeName = flag.String("name", tool.GetUUIDUpper(), "node name,default random uuid")
 	grpcPort = flag.Int("grpcPort", 9981, "grpc server port")
+	center   = flag.String("center", "", "service center")
 )
 
 func main() {
@@ -28,7 +29,7 @@ func main() {
 
 	initer := service.NewIniter(*rootDir)
 	// 如果安装时未填写相关的node名，则直接会以UUID的形式
-	n := node.NewNode(service.BaseService{DB: initer.GetDB()}, *port, *grpcPort, *nodeName)
+	n := node.NewNode(*center, service.BaseService{DB: initer.GetDB()}, *port, *grpcPort, *nodeName)
 
 	n.Init()
 }

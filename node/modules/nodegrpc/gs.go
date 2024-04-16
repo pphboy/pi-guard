@@ -55,15 +55,21 @@ func (n *NodeRpcService) GetNodeInfo(context.Context, *sp.Empty) (*sp.NodeSys, e
 		return nil, err
 	}
 
-	return &sp.NodeSys{
+	ns := &sp.NodeSys{
 		NodeId:     nf.NodeId,
 		NodeName:   nf.NodeName,
 		NodeStatus: int32(nf.NodeStatus),
 		NodeDomain: nf.NodeDomain,
 		CreatedAt:  timestamppb.New(*nf.CreatedAt),
 		UpdatedAt:  timestamppb.New(*nf.UpdatedAt),
-		DeletedAt:  timestamppb.New(*nf.DeletedAt),
-	}, nil
+	}
+
+	if nf.DeletedAt != nil {
+		ns.DeletedAt = timestamppb.New(*nf.DeletedAt)
+	}
+
+	return ns, nil
+
 }
 func (n *NodeRpcService) Shutdown(context.Context, *sp.Empty) (*sp.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Shutdown not implemented")
@@ -193,7 +199,7 @@ func RunRpcServer(port int, ns snproto.RpcServer) {
 	snproto.RegisterNodeAppServiceServer(s, ns)
 	snproto.RegisterNodeServiceServer(s, ns)
 
-	logrus.Infof("listening at %v", lis.Addr())
+	logrus.Printf("listening at %v", lis.Addr())
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to server: %v", err)

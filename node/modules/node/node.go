@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"go-node/modules/nodegrpc"
 	"go-node/modules/rproxy"
@@ -13,8 +14,12 @@ import (
 	"path"
 	"path/filepath"
 	"pglib"
+	pcent "pglib/center"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type NodeBoot interface {
@@ -35,11 +40,12 @@ type NodeBootImpl struct {
 	port           int
 	grpcPort       int
 	nodeName       string
+	center         string
 }
 
-func NewNode(bs gs.BaseService, port int, gp int, nodeName string) NodeBoot {
-
+func NewNode(center string, bs gs.BaseService, port int, gp int, nodeName string) NodeBoot {
 	n := &NodeBootImpl{
+		center:         center,
 		baseService:    bs,
 		pkgService:     gs.NewPkgService(bs),
 		serviceManager: ns.NewAppDirector(),
@@ -56,6 +62,17 @@ func NewNode(bs gs.BaseService, port int, gp int, nodeName string) NodeBoot {
 	return n
 }
 
+func ConnectCenter(center string) (pcent.CenterRadarClient, error) {
+	logrus.Infof("try connect %s", center)
+	conn, err := grpc.Dial(center, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+
+	c := pcent.NewCenterRadarClient(conn)
+	return c, nil
+}
+
 func (n *NodeBootImpl) Init() {
 	if err := n.initLog(); err != nil {
 		logrus.Fatal("init log, ", err)
@@ -66,9 +83,37 @@ func (n *NodeBootImpl) Init() {
 	}
 
 	go func() {
-		logrus.Print("running grpc server")
+		logrus.Info("running grpc server")
 		if err := n.initGrpcServer(); err != nil {
 			logrus.Fatal("init grpc server", err)
+		}
+
+	}()
+
+	// 尝试连接center
+	go func() {
+		if len(n.center) == 0 {
+			return
+		}
+
+		for {
+			c, err := ConnectCenter(n.center)
+			if err != nil {
+				logrus.Warnf("did not connect %s: %v", n.center, err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+			d := fmt.Sprintf("%s.%s", n.nodeName, sys.ROOT_DOMAIN)
+			resp, err := c.SendMe(ctx, &pcent.NodeReaction{
+				Port:   int32(n.grpcPort),
+				Domain: d,
+			})
+			if err != nil {
+				logrus.Error(err)
+			}
+			logrus.Infof("send me ok, node %s ,resp: %v\n", d, resp)
+			break
 		}
 	}()
 
@@ -169,7 +214,7 @@ func (n *NodeBootImpl) initLog() error {
 
 	logrus.SetOutput(logFile)
 	// above warn , can be log in file
-	logrus.SetLevel(logrus.WarnLevel)
+	logrus.SetLevel(logrus.InfoLevel)
 
 	return nil
 }
