@@ -111,9 +111,9 @@ func (n *NodeBootImpl) Init() {
 			})
 			if err != nil {
 				logrus.Error(err)
+				continue
 			}
 			logrus.Infof("send me ok, node %s ,resp: %v\n", d, resp)
-			break
 		}
 	}()
 
@@ -179,7 +179,9 @@ func (n *NodeBootImpl) startReverseHttp() {
 		Addr:    fmt.Sprintf(":%d", n.port),
 	}
 
-	s.ListenAndServe()
+	if err := s.ListenAndServe(); err != nil {
+		logrus.Fatal(err)
+	}
 }
 
 // 初始化grpc服务
@@ -206,6 +208,7 @@ func (n *NodeBootImpl) GetServiceManager() ns.ServiceManager {
 }
 
 func (n *NodeBootImpl) initLog() error {
+	return nil
 	nm := filepath.Join(sys.PgSite(sys.PG_LOGS).Path, fmt.Sprintf("%s_sys.log", n.nodeName))
 	logFile, err := os.OpenFile(nm, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {

@@ -3,15 +3,22 @@ package centers
 import (
 	"context"
 	"fmt"
-	"go-ctrl/models"
+	cm "go-ctrl/models"
+	cr "go-ctrl/models"
+	"go-node/models"
+	"go-node/tool"
 	"net"
 	"pglib/center"
+	rest "pi-rest"
 	"snproto"
+	"strconv"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"gorm.io/gorm"
 )
 
 // TODO:
@@ -45,8 +52,11 @@ Center功能：
 type Center interface {
 	RegisterNode(*center.NodeReaction) error
 	RunRpcServer() error
-	Info() *models.PiProject
+	Info() *cm.PiProject
 	Port() int32
+	Node(nid string) (*cr.PiNode, error)
+	NodeList() ([]*cr.PiNode, error)
+
 	Domain() string
 }
 
@@ -60,14 +70,22 @@ func (c *centerServer) SendMe(ctx context.Context, nr *center.NodeReaction) (
 	p := c.center.Info()
 	logrus.Infof("register %s:%d node reaction", nr.Domain, nr.Port)
 	c.center.RegisterNode(nr)
+
 	return &center.CenterReaction{
 		ProjectInfo: p.Msg(),
 	}, nil
 }
 
 type centerImpl struct {
-	project  *models.PiProject
-	nodeList []*NodeGrpcClient
+	project *cm.PiProject
+	// Node列表
+	nodeList  []*NodeGrpcClient
+	nodeInfos []*models.NodeSys
+	// 存放node的http服务的地方
+	nodeClientList []*NodeClientHttp
+	nodes          map[string]*NodeGrpcClient
+	group          *gin.RouterGroup
+	nodeManager    *NodeManager
 }
 
 type NodeGrpcClient struct {
@@ -76,10 +94,17 @@ type NodeGrpcClient struct {
 	snproto.NodeServiceClient
 }
 
-func NewCenter(p *models.PiProject) Center {
+func NewCenter(db *gorm.DB, p *cm.PiProject, group *gin.RouterGroup) Center {
+
 	ci := &centerImpl{
 		project: p,
+		nodes:   make(map[string]*NodeGrpcClient),
+		// 每个center都会对应一个 以ID为根据的路由
+		group:       group.Group(strconv.Itoa(*p.ProjectId)),
+		nodeManager: NewNodeManager(),
 	}
+	// 注册路由
+	ci.registerRoute()
 
 	go ci.RunRpcServer()
 	return ci
@@ -96,10 +121,12 @@ func (c *centerImpl) RegisterNode(nr *center.NodeReaction) error {
 		snproto.NewNodeAppServiceClient(conn),
 		snproto.NewNodeServiceClient(conn),
 	}
+	// ngc.
 
 	// 连接Node的Grpc，然后将连接存起来
 	// 定时拿一下性能信息，类似于一个心跳
 	c.nodeList = append(c.nodeList, ngc)
+
 	// timeout 1 minute
 	ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
 	ndInfo, err := ngc.GetNodeInfo(ctx, &snproto.Empty{})
@@ -107,7 +134,33 @@ func (c *centerImpl) RegisterNode(nr *center.NodeReaction) error {
 		return err
 	}
 
+	ns := tool.ConvertMsgToNodeSys(ndInfo)
+
+	c.nodes[ndInfo.NodeId] = ngc
+
+	pn := &cr.PiNode{
+		NodeId:     ns.NodeId,
+		ProjectId:  c.project.ProjectId,
+		NodeName:   ns.NodeName,
+		NodeDomain: ns.NodeDomain,
+		// NodeIntro  : ns.Node
+		NodeStatus: &ns.NodeStatus,
+		CreatedAt:  ns.CreatedAt,
+		UpdatedAt:  ns.UpdatedAt,
+		DeletedAt:  ns.DeletedAt,
+	}
+
 	logrus.Infof("center %s connect [node:%s] succeed!", c.project.ProjectName, ndInfo.NodeDomain)
+
+	nodeClient := NewNodeClientHttp(ngc, pn, c.group)
+
+	c.nodeClientList = append(c.nodeClientList, nodeClient)
+
+	if err := c.nodeManager.FirstOrCreate(pn); err != nil {
+		logrus.Error("create PiNode of center,", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -133,7 +186,33 @@ func (c *centerImpl) RunRpcServer() error {
 	return nil
 }
 
-func (c *centerImpl) Info() *models.PiProject {
+func (c *centerImpl) registerRoute() {
+	logrus.Info("register route: ", c.group.BasePath())
+
+	c.group.GET("", func(ctx *gin.Context) {
+		ctx.JSON(200, &rest.SourceResult{
+			Code: 0,
+			Msg:  "获取成功",
+			Data: c.Info(),
+		})
+	})
+
+	c.group.GET("list", func(ctx *gin.Context) {
+		nlist, err := c.NodeList()
+		if err != nil {
+			ctx.AbortWithError(500, err)
+			return
+		}
+
+		ctx.JSON(200, &rest.SourceResult{
+			Code: 0,
+			Msg:  "获取成功",
+			Data: nlist,
+		})
+	})
+}
+
+func (c *centerImpl) Info() *cm.PiProject {
 	return c.project
 }
 
@@ -144,4 +223,12 @@ func (c *centerImpl) Port() int32 {
 
 func (c *centerImpl) Domain() string {
 	return c.project.Domain
+}
+
+func (c *centerImpl) Node(nid string) (*cr.PiNode, error) {
+	return c.nodeManager.Get(nid)
+}
+
+func (c *centerImpl) NodeList() ([]*cr.PiNode, error) {
+	return c.nodeManager.List(c.project.ProjectId)
 }

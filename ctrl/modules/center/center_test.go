@@ -3,6 +3,7 @@ package centers
 import (
 	"context"
 	"fmt"
+	"go-ctrl/db"
 	"go-ctrl/models"
 	"go-node/modules/node"
 	gs "go-node/service"
@@ -12,11 +13,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+func init() {
+	db.Init("./", "test")
+}
+
 func TestCenter(t *testing.T) {
+
+	g := gin.Default()
+	go func() {
+		g.Run(":9901")
+	}()
+
 	port := 8000
 	domain := "c1.pi.g"
 
@@ -27,13 +39,12 @@ func TestCenter(t *testing.T) {
 	go func() {
 
 		pid := 1
-		NewCenter(&models.PiProject{
+		NewCenter(nil, &models.PiProject{
 			ProjectId:     &pid,
 			ProjectStatus: &pid,
 			Domain:        "c1.pi.g",
 			Port:          &port,
-		})
-
+		}, g.Group("/"))
 		wg.Done()
 	}()
 
@@ -46,10 +57,13 @@ func TestCenter(t *testing.T) {
 	}()
 
 	select {}
-	wg.Wait()
 }
 
 func TestConnectGrpcCenter(t *testing.T) {
+	g := gin.Default()
+	go func() {
+		g.Run(":9901")
+	}()
 
 	port := 8000
 	domain := "c1.pi.g"
@@ -58,10 +72,10 @@ func TestConnectGrpcCenter(t *testing.T) {
 	wg.Add(1)
 	go func() {
 
-		NewCenter(&models.PiProject{
+		NewCenter(nil, &models.PiProject{
 			Domain: domain,
 			Port:   &port,
-		})
+		}, g.Group("project"))
 
 		wg.Done()
 	}()
@@ -79,9 +93,7 @@ func TestConnectGrpcCenter(t *testing.T) {
 			Domain: "ndev.pi.g",
 		})
 		wg.Done()
-
 	}()
 
 	wg.Wait()
-
 }

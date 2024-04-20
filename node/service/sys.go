@@ -7,6 +7,8 @@ import (
 	"go-node/models"
 	"go-node/sys"
 	"go-node/tool"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -35,6 +37,8 @@ func (s *SysServiceImpl) Install(nodeName string) error {
 		NodeName:   nodeName,
 		NodeDomain: fmt.Sprintf("%s.%s", nodeName, sys.ROOT_DOMAIN),
 	}
+
+	logrus.Printf("install %+v \n", sys)
 
 	if err := s.sysDao.Init(sys); err != nil {
 		return err

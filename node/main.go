@@ -18,6 +18,8 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	logrus.Println("get param:\nrootDir:", *rootDir)
 	// logrus.
 	logrus.Println("http port:", *port)

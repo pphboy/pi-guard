@@ -85,13 +85,9 @@ func (n *NodeRpcService) LoadAppList(context.Context, *sp.Empty) (*sp.NodeAppArr
 		return nil, err
 	}
 
-	var arrAny []*anypb.Any
+	var arrAny []*snproto.NodeAppInfo
 	for _, v := range ns {
-		d, err := anypb.New(v.Message())
-		if err != nil {
-			return nil, err
-		}
-		arrAny = append(arrAny, d)
+		arrAny = append(arrAny, v.Message())
 	}
 
 	return &sp.NodeAppArray{

@@ -27,7 +27,7 @@ type NodeAppArray struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Values []*anypb.Any `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	Values []*NodeAppInfo `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
 }
 
 func (x *NodeAppArray) Reset() {
@@ -62,7 +62,7 @@ func (*NodeAppArray) Descriptor() ([]byte, []int) {
 	return file_sn_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *NodeAppArray) GetValues() []*anypb.Any {
+func (x *NodeAppArray) GetValues() []*NodeAppInfo {
 	if x != nil {
 		return x.Values
 	}
@@ -525,6 +525,7 @@ type MonitorPacket struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// 只能自己去解析了
 	Json string `protobuf:"bytes,1,opt,name=Json,proto3" json:"Json,omitempty"`
 }
 
@@ -577,8 +578,8 @@ var file_sn_proto_rawDesc = []byte{
 	0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22,
 	0x3c, 0x0a, 0x0c, 0x4e, 0x6f, 0x64, 0x65, 0x41, 0x70, 0x70, 0x41, 0x72, 0x72, 0x61, 0x79, 0x12,
 	0x2c, 0x0a, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
-	0x14, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
-	0x66, 0x2e, 0x41, 0x6e, 0x79, 0x52, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x22, 0xef, 0x03,
+	0x14, 0x2e, 0x73, 0x6e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x41, 0x70,
+	0x70, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x22, 0xef, 0x03,
 	0x0a, 0x0b, 0x4e, 0x6f, 0x64, 0x65, 0x41, 0x70, 0x70, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x1c, 0x0a,
 	0x09, 0x4e, 0x6f, 0x64, 0x65, 0x41, 0x70, 0x70, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
 	0x52, 0x09, 0x4e, 0x6f, 0x64, 0x65, 0x41, 0x70, 0x70, 0x49, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x4e,
@@ -720,21 +721,21 @@ var file_sn_proto_goTypes = []interface{}{
 	(*Empty)(nil),                 // 4: snproto.Empty
 	(*Result)(nil),                // 5: snproto.Result
 	(*MonitorPacket)(nil),         // 6: snproto.MonitorPacket
-	(*anypb.Any)(nil),             // 7: google.protobuf.Any
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*anypb.Any)(nil),             // 8: google.protobuf.Any
 }
 var file_sn_proto_depIdxs = []int32{
-	7,  // 0: snproto.NodeAppArray.values:type_name -> google.protobuf.Any
-	8,  // 1: snproto.NodeAppInfo.CreatedAt:type_name -> google.protobuf.Timestamp
-	8,  // 2: snproto.NodeAppInfo.DeletedAt:type_name -> google.protobuf.Timestamp
-	8,  // 3: snproto.NodeAppInfo.UpdatedAt:type_name -> google.protobuf.Timestamp
-	8,  // 4: snproto.PiCloudApp.CreatedAt:type_name -> google.protobuf.Timestamp
-	8,  // 5: snproto.PiCloudApp.UpdatedAt:type_name -> google.protobuf.Timestamp
-	8,  // 6: snproto.PiCloudApp.DeletedAt:type_name -> google.protobuf.Timestamp
-	8,  // 7: snproto.NodeSys.CreatedAt:type_name -> google.protobuf.Timestamp
-	8,  // 8: snproto.NodeSys.UpdatedAt:type_name -> google.protobuf.Timestamp
-	8,  // 9: snproto.NodeSys.DeletedAt:type_name -> google.protobuf.Timestamp
-	7,  // 10: snproto.Result.Data:type_name -> google.protobuf.Any
+	1,  // 0: snproto.NodeAppArray.values:type_name -> snproto.NodeAppInfo
+	7,  // 1: snproto.NodeAppInfo.CreatedAt:type_name -> google.protobuf.Timestamp
+	7,  // 2: snproto.NodeAppInfo.DeletedAt:type_name -> google.protobuf.Timestamp
+	7,  // 3: snproto.NodeAppInfo.UpdatedAt:type_name -> google.protobuf.Timestamp
+	7,  // 4: snproto.PiCloudApp.CreatedAt:type_name -> google.protobuf.Timestamp
+	7,  // 5: snproto.PiCloudApp.UpdatedAt:type_name -> google.protobuf.Timestamp
+	7,  // 6: snproto.PiCloudApp.DeletedAt:type_name -> google.protobuf.Timestamp
+	7,  // 7: snproto.NodeSys.CreatedAt:type_name -> google.protobuf.Timestamp
+	7,  // 8: snproto.NodeSys.UpdatedAt:type_name -> google.protobuf.Timestamp
+	7,  // 9: snproto.NodeSys.DeletedAt:type_name -> google.protobuf.Timestamp
+	8,  // 10: snproto.Result.Data:type_name -> google.protobuf.Any
 	4,  // 11: snproto.MonitorService.GetInfoPacket:input_type -> snproto.Empty
 	4,  // 12: snproto.NodeService.GetNodeInfo:input_type -> snproto.Empty
 	4,  // 13: snproto.NodeService.Shutdown:input_type -> snproto.Empty

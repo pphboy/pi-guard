@@ -36,7 +36,7 @@ service NodeAppService{
 }
 
 message NodeAppArray {
-    repeated google.protobuf.Any values = 1;
+    repeated NodeAppInfo values = 1;
 }
 
 // TODO: 写好对应Message
