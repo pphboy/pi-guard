@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -51,32 +52,39 @@ type NodeClientHttp struct {
 // 注册路由
 func (n *NodeClientHttp) ServeHttp(g *gin.RouterGroup) {
 	b := g.Group(n.nodeInfo.NodeId)
-	b.GET("/", n.getNodeInfo)    // 返回当前结点的基本消息
-	b.GET("/monitor", n.monitor) // 返回当前结点的基本消息
-	b.GET("/applist", n.appList) // 返回当前结点的基本消息
+	logrus.Infof("node %s register : %s\n", n.nodeInfo.NodeId, b.BasePath())
+	b.GET("", n.getNodeInfo)         // 返回当前结点的基本消息
+	b.GET("/monitor", n.monitor)     // 返回当前结点的基本消息
+	b.GET("/applist", n.appList)     // 返回当前结点的基本消息
+	b.GET("/reboot", n.reboot)       // 返回当前结点的基本消息
+	b.POST("/install", n.installApp) // 返回当前结点的基本消息
 }
 
 func (n *NodeClientHttp) getNodeInfo(ctx *gin.Context) {
 	// return n.nodeInfo
-	ctx.JSON(200, n.nodeInfo)
+	ctx.JSON(200, &rest.SourceResult{
+		Code: 0,
+		Msg:  "获取成功",
+		Data: n.nodeInfo,
+	})
 }
 
 func (n *NodeClientHttp) monitor(ctx *gin.Context) {
 	tmctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
 	mp, err := n.client.GetInfoPacket(tmctx, &snproto.Empty{})
 	if err != nil {
-		ctx.JSON(500, gin.H{
-			"error": err,
-			"code":  500,
+		ctx.JSON(500, rest.SourceResult{
+			Msg:  err.Error(),
+			Code: 500,
 		})
 		return
 	}
 	mpj := &models.MonitorPacket{}
 
 	if err := json.Unmarshal([]byte(mp.Json), mpj); err != nil {
-		ctx.JSON(500, gin.H{
-			"error": err,
-			"code":  500,
+		ctx.JSON(500, rest.SourceResult{
+			Msg:  err.Error(),
+			Code: 500,
 		})
 		return
 	}
@@ -88,13 +96,13 @@ func (n *NodeClientHttp) appList(ctx *gin.Context) {
 	tmctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
 	alist, err := n.client.LoadAppList(tmctx, &snproto.Empty{})
 	if err != nil {
-		ctx.JSON(500, gin.H{
-			"error": err,
-			"code":  500,
+		ctx.JSON(500, rest.SourceResult{
+			Msg:  err.Error(),
+			Code: 500,
 		})
 		return
 	}
-	var a []*models.NodeApp
+	a := []*models.NodeApp{}
 	for _, v := range alist.Values {
 		a = append(a, tool.ConvertMsgToNodeInfo(v))
 	}
@@ -103,6 +111,47 @@ func (n *NodeClientHttp) appList(ctx *gin.Context) {
 		Data: a,
 		Msg:  "成功",
 		Code: 0,
+	})
+}
+
+func (n *NodeClientHttp) reboot(ctx *gin.Context) {
+	c, _ := context.WithTimeout(context.Background(), 1*time.Minute)
+	_, err := n.client.Reboot(c, &snproto.Empty{})
+	if err != nil {
+		ctx.AbortWithError(500, err)
+		return
+	}
+
+	ctx.JSON(200, &rest.SourceResult{
+		Code: 0,
+		Msg:  "重启成功，正在重启中",
+	})
+}
+
+func (n *NodeClientHttp) installApp(ctx *gin.Context) {
+	pca := &models.PiCloudApp{}
+	if err := ctx.ShouldBindJSON(pca); err != nil {
+		ctx.JSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	c, _ := context.WithTimeout(context.Background(), 1*time.Minute)
+	res, err := n.client.InstallApp(c, pca.GrpcMsg())
+	if err != nil {
+		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(200, &rest.SourceResult{
+		Code: 0,
+		Msg:  "安装成功",
+		Data: res,
 	})
 }
 

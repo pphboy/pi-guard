@@ -63,3 +63,22 @@ func ConvertMsgToNodeSys(s *snproto.NodeSys) *nm.NodeSys {
 		UpdatedAt:  &ua,
 	}
 }
+
+func ConvertToPiCloudApp(s *snproto.PiCloudApp) *nm.PiCloudApp {
+	ca := s.CreatedAt.AsTime()
+	da := s.DeletedAt.AsTime()
+	ua := s.UpdatedAt.AsTime()
+	v := int(s.AppVersion)
+	return &nm.PiCloudApp{
+		AppId:      s.AppId,
+		AppName:    s.AppName,
+		AppIntro:   s.AppIntro,
+		AppManual:  s.AppManual,
+		AppVersion: v,
+		AppSite:    s.AppSite,
+		AppHistory: s.AppHistory,
+		CreatedAt:  &ca,
+		UpdatedAt:  &da,
+		DeletedAt:  &ua,
+	}
+}

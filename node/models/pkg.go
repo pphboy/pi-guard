@@ -78,16 +78,16 @@ func (*NodeApp) TableName() string {
 // class:HongMouer.HIS.Models.PiCloudApp
 // version:2024-02-17 09:59
 type PiCloudApp struct {
-	AppId      string     `gorm:"column:APP_ID;primaryKey;" json:"AppId"` //type:string       comment:应用ID                                        version:2024-02-17 09:59
-	AppName    string     `gorm:"column:APP_NAME" json:"AppName"`         //type:string       comment:应用名称                                      version:2024-02-17 09:59
-	AppIntro   string     `gorm:"column:APP_INTRO" json:"AppIntro"`       //type:string       comment:应用介绍                                      version:2024-02-17 09:59
-	AppManual  string     `gorm:"column:APP_MANUNAL" json:"AppManunal"`   //type:string       comment:应用手册                                      version:2024-02-17 09:59
-	AppVersion int        `gorm:"column:APP_VERSION" json:"AppVersion"`   //type:*int         comment:应用版本                                      version:2024-02-17 16:22
-	AppSite    string     `gorm:"column:APP_SITE" json:"AppSite"`         //type:string       comment:下载地址                                      version:2024-02-17 09:59
-	AppHistory string     `gorm:"column:APP_HISTORY" json:"AppHistory"`   //type:string       comment:应用历史;存储过往版本名与时间，以及下载方式   version:2024-02-17 09:59
-	CreatedAt  *time.Time `gorm:"column:CREATED_AT" json:"CreatedAt"`     //type:*time.Time   comment:创建时间                                      version:2024-02-17 09:59
-	UpdatedAt  *time.Time `gorm:"column:UPDATED_AT" json:"UpdatedAt"`     //type:*time.Time   comment:更新时间                                      version:2024-02-17 09:59
-	DeletedAt  *time.Time `gorm:"column:DELETED_AT" json:"DeletedAt"`     //type:*time.Time   comment:删除时间                                      version:2024-02-17 09:59
+	AppId      string     `gorm:"column:APP_ID;primaryKey;" json:"appId"` //type:string       comment:应用ID                                        version:2024-02-17 09:59
+	AppName    string     `gorm:"column:APP_NAME;unique;" json:"appName"` //type:string       comment:应用名称                                      version:2024-02-17 09:59
+	AppIntro   string     `gorm:"column:APP_INTRO" json:"appIntro"`       //type:string       comment:应用介绍                                      version:2024-02-17 09:59
+	AppManual  string     `gorm:"column:APP_MANUAL" json:"appManual"`     //type:string       comment:应用手册                                      version:2024-02-17 09:59
+	AppVersion int        `gorm:"column:APP_VERSION" json:"appVersion"`   //type:*int         comment:应用版本                                      version:2024-02-17 16:22
+	AppSite    string     `gorm:"column:APP_SITE;unique;" json:"appSite"` //type:string       comment:下载地址                                      version:2024-02-17 09:59
+	AppHistory string     `gorm:"column:APP_HISTORY" json:"appHistory"`   //type:string       comment:应用历史;存储过往版本名与时间，以及下载方式   version:2024-02-17 09:59
+	CreatedAt  *time.Time `gorm:"column:CREATED_AT" json:"createdAt"`     //type:*time.Time   comment:创建时间                                      version:2024-02-17 09:59
+	UpdatedAt  *time.Time `gorm:"column:UPDATED_AT" json:"updatedAt"`     //type:*time.Time   comment:更新时间                                      version:2024-02-17 09:59
+	DeletedAt  *time.Time `gorm:"column:DELETED_AT" json:"deletedAt"`     //type:*time.Time   comment:删除时间                                      version:2024-02-17 09:59
 }
 
 // TableName 表名:PI_CLOUD_APP，应用。
@@ -113,4 +113,31 @@ func (*PiCloudApp) ResolveGrpcMsg(gm *snproto.PiCloudApp) *PiCloudApp {
 		UpdatedAt:  &ut,
 		DeletedAt:  &dt,
 	}
+}
+
+func (gm *PiCloudApp) GrpcMsg() *snproto.PiCloudApp {
+
+	pca := &snproto.PiCloudApp{
+		AppId:      gm.AppId,
+		AppName:    gm.AppName,
+		AppIntro:   gm.AppIntro,
+		AppManual:  gm.AppManual,
+		AppVersion: int32(gm.AppVersion),
+		AppSite:    gm.AppSite,
+		AppHistory: gm.AppHistory,
+	}
+
+	if gm.CreatedAt != nil {
+		pca.CreatedAt = timestamppb.New(*gm.CreatedAt)
+	}
+
+	if gm.UpdatedAt != nil {
+		pca.UpdatedAt = timestamppb.New(*gm.UpdatedAt)
+	}
+
+	if gm.DeletedAt != nil {
+		pca.DeletedAt = timestamppb.New(*gm.DeletedAt)
+	}
+
+	return pca
 }

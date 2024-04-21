@@ -2,7 +2,8 @@ package db
 
 import (
 	"fmt"
-	"go-ctrl/models"
+	cm "go-ctrl/models"
+	"go-node/models"
 	"log"
 	"os"
 	"time"
@@ -36,7 +37,9 @@ func Init(dataPath string, name string) {
 		panic(err)
 	}
 
-	if err := db.AutoMigrate(&models.PiNode{}, &models.PiProject{}); err != nil {
+	if err := db.AutoMigrate(&cm.PiNode{},
+		&cm.PiProject{},
+		&models.PiCloudApp{}); err != nil {
 		panic(err)
 	}
 
