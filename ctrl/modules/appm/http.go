@@ -20,14 +20,16 @@ import (
 // post: update 更新
 
 type appMHttp struct {
-	store   *AppStore
-	picRoot string
+	store      *AppStore
+	picRoot    string
+	ctrlDomain string
 }
 
-func NewAppHttp(picRoot string, g *gin.RouterGroup) *appMHttp {
+func NewAppHttp(picRoot, ctrlDomain string, g *gin.RouterGroup) *appMHttp {
 	am := &appMHttp{
-		store:   NewAppStore(),
-		picRoot: picRoot,
+		store:      NewAppStore(),
+		picRoot:    picRoot,
+		ctrlDomain: ctrlDomain,
 	}
 	am.serverHttp(g)
 	return am
@@ -148,12 +150,7 @@ func (a *appMHttp) upload(c *gin.Context) {
 	mask := syscall.Umask(0)
 	defer syscall.Umask(mask)
 	file, _ := c.FormFile("file")
-	if strings.Index(file.Filename, ".pkg") == -1 {
-		c.JSON(500, &rest.SourceResult{
-			Code: 500,
-			Msg:  "not support file package, just use *.pkg, " + file.Filename,
-		})
-	}
+
 	logrus.Println(file.Filename)
 	fn := fmt.Sprintf("%s.pkg", uuid.NewString())
 	// 直接是在服务器运行的位置
@@ -184,7 +181,7 @@ func (a *appMHttp) upload(c *gin.Context) {
 		Code: 0,
 		Msg:  "upload file",
 		Data: gin.H{
-			"path":    fn,
+			"path":    fmt.Sprintf("http://%s/assets/%s", a.ctrlDomain, fn),
 			"version": cfg.Version,
 			"name":    cfg.Name,
 		},

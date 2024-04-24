@@ -33,6 +33,8 @@ service NodeAppService{
     rpc Stop(NodeAppInfo) returns (Result){}
 
     rpc Restart(NodeAppInfo) returns (Result){}
+	
+    rpc Start(NodeAppInfo) returns (Result){}
 }
 
 message NodeAppArray {

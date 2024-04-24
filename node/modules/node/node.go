@@ -114,6 +114,7 @@ func (n *NodeBootImpl) Init() {
 				continue
 			}
 			logrus.Infof("send me ok, node %s ,resp: %v\n", d, resp)
+			break
 		}
 	}()
 

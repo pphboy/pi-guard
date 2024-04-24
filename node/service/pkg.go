@@ -10,9 +10,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	pglib "pglib"
 	"strings"
+	"syscall"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -144,6 +146,11 @@ func (p *pkgServiceImpl) InstallApp(pc *models.PiCloudApp) error {
 		return err
 	}
 
+	mask := syscall.Umask(0)
+	defer syscall.Umask(mask)
+
+	os.Chmod(path.Join(appSite, cfg.Exec), 0777)
+
 	// 启动成功之后，将 应用的记录，添加到 数据库中，如果已存在该app的版本，则修改版本号
 	logrus.Println("add to db")
 
@@ -161,7 +168,7 @@ func (p *pkgServiceImpl) InstallApp(pc *models.PiCloudApp) error {
 			NodeAppType:   &models.APP_NORM,
 			NodeAppName:   cfg.Name,
 			NodeAppPort:   cfg.Port,
-			NodeAppStatus: 0,
+			NodeAppStatus: models.STATUS_RUNNING,
 			NodeAppIntro:  cfg.Intro,
 			NodeAppDomain: nodeInfo.GetAppDomain(strings.ToLower(cfg.Name)), // 基于此结点的根域名的，扩展子应用 app.node.pi.g
 		})

@@ -53,11 +53,14 @@ type NodeClientHttp struct {
 func (n *NodeClientHttp) ServeHttp(g *gin.RouterGroup) {
 	b := g.Group(n.nodeInfo.NodeId)
 	logrus.Infof("node %s register : %s\n", n.nodeInfo.NodeId, b.BasePath())
-	b.GET("", n.getNodeInfo)         // 返回当前结点的基本消息
-	b.GET("/monitor", n.monitor)     // 返回当前结点的基本消息
-	b.GET("/applist", n.appList)     // 返回当前结点的基本消息
-	b.GET("/reboot", n.reboot)       // 返回当前结点的基本消息
-	b.POST("/install", n.installApp) // 返回当前结点的基本消息
+	b.GET("", n.getNodeInfo)
+	b.GET("/monitor", n.monitor)
+	b.GET("/applist", n.appList)
+	b.GET("/reboot", n.reboot)
+	b.POST("/install", n.installApp)
+	b.POST("/stop", n.stopApp)
+	b.POST("/start", n.startApp)
+	b.POST("/uninstall", n.uninstallApp)
 }
 
 func (n *NodeClientHttp) getNodeInfo(ctx *gin.Context) {
@@ -139,6 +142,8 @@ func (n *NodeClientHttp) installApp(ctx *gin.Context) {
 	}
 
 	c, _ := context.WithTimeout(context.Background(), 1*time.Minute)
+
+	// pca.AppSite
 	res, err := n.client.InstallApp(c, pca.GrpcMsg())
 	if err != nil {
 		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
@@ -187,4 +192,79 @@ func (nm *NodeManager) FirstOrCreate(node *cm.PiNode) error {
 		return err
 	}
 	return nil
+}
+
+func (n *NodeClientHttp) uninstallApp(ctx *gin.Context) {
+	nodeApp := models.NodeApp{}
+
+	if err := ctx.ShouldBindJSON(&nodeApp); err != nil {
+		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	if _, err := n.client.UninstallApp(GetOneMinuteCtx(), nodeApp.Message()); err != nil {
+		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(200, &rest.SourceResult{
+		Code: 0,
+	})
+}
+
+func (n *NodeClientHttp) stopApp(ctx *gin.Context) {
+	nodeApp := models.NodeApp{}
+
+	if err := ctx.ShouldBindJSON(&nodeApp); err != nil {
+		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	if _, err := n.client.Stop(GetOneMinuteCtx(), nodeApp.Message()); err != nil {
+		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+	ctx.JSON(200, &rest.SourceResult{
+		Code: 0,
+	})
+}
+
+func (n *NodeClientHttp) startApp(ctx *gin.Context) {
+	nodeApp := models.NodeApp{}
+
+	if err := ctx.ShouldBindJSON(&nodeApp); err != nil {
+		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	res, err := n.client.Start(GetOneMinuteCtx(), nodeApp.Message())
+	if err != nil {
+		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+	ctx.JSON(200, res)
+
+}
+
+func GetOneMinuteCtx() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
+	return ctx
 }

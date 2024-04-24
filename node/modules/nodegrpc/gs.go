@@ -165,6 +165,23 @@ func (n *NodeRpcService) Restart(ctx context.Context, nai *sp.NodeAppInfo) (*sp.
 	}, nil
 }
 
+func (n *NodeRpcService) Start(ctx context.Context, nai *sp.NodeAppInfo) (*sp.Result, error) {
+	ra, err := n.sm.GetServiceByApp(tool.ConvertRpcInfoToNodeInfo(nai))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ra.Start(); err != nil {
+		return nil, err
+	}
+
+	return &sp.Result{
+		Code:    snproto.APP_RESTART_SUCCEED,
+		Message: fmt.Sprintf("启动[%s]{%s}应用成功", nai.NodeAppId, nai.NodeAppName),
+		Data:    nil,
+	}, nil
+}
+
 // monitorService
 func (n *NodeRpcService) GetInfoPacket(context.Context, *sp.Empty) (*sp.MonitorPacket, error) {
 	p, err := n.monitor.GetInfoPacket()

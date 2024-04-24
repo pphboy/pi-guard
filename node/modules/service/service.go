@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"go-node/models"
 	"os/exec"
+	"strings"
+
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -104,18 +106,27 @@ type RunnerApp struct {
 func (r *RunnerApp) Start() error {
 	logrus.Print("booting ", r.app.NodeAppDomain)
 	r.runStatus = true
+	r.cmd = exec.Command(r.cmd.String())
 
 	go func() {
 		if err := r.cmd.Run(); err != nil {
 			logrus.Errorf("App:%s, Cmd:%s, Err: %v ", r.app.NodeAppName, r.cmd.String(), err)
-			r.runStatus = false
-			// 即使 变成 error，也可以尝试去启动
-			r.setStatus(models.STATUS_ERROR)
+
+			logrus.Warnf("SyscalError %+v", strings.Compare(err.Error(), "signal: killed"))
+
+			if strings.Compare(err.Error(), "signal: killed") == 0 {
+				r.runStatus = false
+				// 即使 变成 error，也可以尝试去启动
+				r.setStatus(models.STATUS_STOP)
+			} else {
+				r.runStatus = false
+				// 即使 变成 error，也可以尝试去启动
+				r.setStatus(models.STATUS_ERROR)
+			}
 		}
 	}()
 
 	r.setStatus(models.STATUS_RUNNING)
-
 	return nil
 }
 

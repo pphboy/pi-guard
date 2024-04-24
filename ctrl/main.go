@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	dataPath = flag.String("path", "./", "store data path")
-	ctrlName = flag.String("name", "ctrl", "controller name")
-	port     = flag.Int("port", 7431, "program running port")
-	picPath  = path.Join(*dataPath, "static")
+	dataPath   = flag.String("path", "./", "store data path")
+	ctrlName   = flag.String("name", "ctrl", "controller name")
+	httpPort   = flag.Int("httpPort", 7431, "program running port")
+	picPath    = path.Join(*dataPath, "static")
+	ctrlDomain = flag.String("ctrlDomain", "ctrl.pi.g", "control domain")
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	initOperation()
 
 	logrus.Println("start running")
-	s := http.NewCtrlHttp(*port)
+	s := http.NewCtrlHttp(*httpPort)
 
 	s.RouterGroup("").Static("/assets", picPath)
 
@@ -36,7 +37,7 @@ func main() {
 	pm := centers.NewProjectManager(cm)
 
 	// appStore
-	appm.NewAppHttp(picPath, s.RouterGroup("appm"))
+	appm.NewAppHttp(picPath, *ctrlDomain, s.RouterGroup("appm"))
 
 	centers.NewProjectHttp(s.RouterGroup("project"), pm)
 

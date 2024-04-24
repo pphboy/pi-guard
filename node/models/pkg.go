@@ -22,36 +22,48 @@ import (
 // class:HongMouer.HIS.Models.NodeApp
 // version:2024-02-16 19:38
 type NodeApp struct {
-	NodeAppId      string     `gorm:"column:NODE_APP_ID;primaryKey;" json:"NodeAppId"` //type:string       comment:应用ID                                         version:2024-02-16 19:38
-	NodeId         string     `gorm:"column:NODE_ID" json:"NodeId"`                    //type:string       comment:结点ID                                         version:2024-02-16 19:38
-	NodeAppType    *AppType   `gorm:"column:NODE_APP_TYPE" json:"NodeAppType"`         //type:*int         comment:结点应用类型;1 SYS, 2 NORMAL                   version:2024-02-16 19:38
-	NodeAppName    string     `gorm:"column:NODE_APP_NAME" json:"NodeAppName"`         //type:string       comment:应用名                                         version:2024-02-16 19:38
-	NodeAppIntro   string     `gorm:"column:NODE_APP_INTRO" json:"NodeAppIntro"`       //type:string       comment:应用介绍                                       version:2024-02-16 19:38
-	NodeAppPort    string     `gorm:"column:NODE_APP_PORT" json:"NodeAppPort"`         //type:string       comment:应用端口                                       version:2024-02-16 19:38
-	NodeAppDomain  string     `gorm:"column:NODE_APP_DOMAIN" json:"NodeAppDomain"`     //type:string       comment:应用访问地址                                   version:2024-02-16 19:38
-	NodeAppStatus  int        `gorm:"column:NODE_APP_STATUS" json:"NodeAppStatus"`     //type:*int         comment:活动状态;running=1,stop=0,error=-1,unheal=-2   version:2024-02-16 19:38
-	NodeAppVersion int        `gorm:"column:NODE_APP_VERSION" json:"NodeAppVersion"`   //type:*int         comment:版本                                           version:2024-02-17 16:22
-	CreatedAt      *time.Time `gorm:"column:CREATED_AT" json:"CreatedAt"`              //type:*time.Time   comment:创建时间                                       version:2024-02-16 19:38
-	DeletedAt      *time.Time `gorm:"column:DELETED_AT" json:"DeletedAt"`              //type:*time.Time   comment:删除时间                                       version:2024-02-16 19:38
-	UpdatedAt      *time.Time `gorm:"column:UPDATED_AT" json:"UpdatedAt"`              //type:*time.Time   comment:更新时间                                       version:2024-02-16 19:38
+	NodeAppId      string     `gorm:"column:NODE_APP_ID;primaryKey;" json:"appId"` //type:string       comment:应用ID                                         version:2024-02-16 19:38
+	NodeId         string     `gorm:"column:NODE_ID" json:"nodeId"`                //type:string       comment:结点ID                                         version:2024-02-16 19:38
+	NodeAppType    *AppType   `gorm:"column:NODE_APP_TYPE" json:"appType"`         //type:*int         comment:结点应用类型;1 SYS, 2 NORMAL                   version:2024-02-16 19:38
+	NodeAppName    string     `gorm:"column:NODE_APP_NAME" json:"appName"`         //type:string       comment:应用名                                         version:2024-02-16 19:38
+	NodeAppIntro   string     `gorm:"column:NODE_APP_INTRO" json:"appIntro"`       //type:string       comment:应用介绍                                       version:2024-02-16 19:38
+	NodeAppPort    string     `gorm:"column:NODE_APP_PORT" json:"appPort"`         //type:string       comment:应用端口                                       version:2024-02-16 19:38
+	NodeAppDomain  string     `gorm:"column:NODE_APP_DOMAIN" json:"appDomain"`     //type:string       comment:应用访问地址                                   version:2024-02-16 19:38
+	NodeAppStatus  int        `gorm:"column:NODE_APP_STATUS" json:"appStatus"`     //type:*int         comment:活动状态;running=1,stop=0,error=-1,unheal=-2   version:2024-02-16 19:38
+	NodeAppVersion int        `gorm:"column:NODE_APP_VERSION" json:"appVersion"`   //type:*int         comment:版本                                           version:2024-02-17 16:22
+	CreatedAt      *time.Time `gorm:"column:CREATED_AT" json:"CreatedAt"`          //type:*time.Time   comment:创建时间                                       version:2024-02-16 19:38
+	DeletedAt      *time.Time `gorm:"column:DELETED_AT" json:"DeletedAt"`          //type:*time.Time   comment:删除时间                                       version:2024-02-16 19:38
+	UpdatedAt      *time.Time `gorm:"column:UPDATED_AT" json:"UpdatedAt"`          //type:*time.Time   comment:更新时间                                       version:2024-02-16 19:38
 }
 
 func (v *NodeApp) Message() *snproto.NodeAppInfo {
-	return &snproto.NodeAppInfo{
-		NodeAppId:      v.NodeAppId,
-		NodeId:         v.NodeId,
-		NodeAppName:    v.NodeAppName,
-		NodeAppType:    int32(*v.NodeAppType),
+
+	nai := &snproto.NodeAppInfo{
+		NodeAppId:   v.NodeAppId,
+		NodeId:      v.NodeId,
+		NodeAppName: v.NodeAppName,
+		// NodeAppType:    int32(*v.NodeAppType),
 		NodeAppIntro:   v.NodeAppIntro,
 		NodeAppPort:    v.NodeAppPort,
 		NodeAppDomain:  v.NodeAppDomain,
 		NodeAppStatus:  int32(v.NodeAppStatus),
 		NodeAppVersion: int32(v.NodeAppVersion),
-
-		CreatedAt: timestamppb.New(*v.CreatedAt),
-		DeletedAt: timestamppb.New(*v.DeletedAt),
-		UpdatedAt: timestamppb.New(*v.UpdatedAt),
 	}
+
+	if v.NodeAppType != nil {
+		nai.NodeAppType = int32(*v.NodeAppType)
+	}
+	if v.CreatedAt != nil {
+		nai.CreatedAt = timestamppb.New(*v.CreatedAt)
+	}
+	if v.UpdatedAt != nil {
+		nai.UpdatedAt = timestamppb.New(*v.UpdatedAt)
+	}
+	if v.DeletedAt != nil {
+		nai.DeletedAt = timestamppb.New(*v.DeletedAt)
+	}
+
+	return nai
 }
 
 type AppType int

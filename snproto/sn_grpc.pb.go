@@ -282,6 +282,7 @@ const (
 	NodeAppService_InstallApp_FullMethodName   = "/snproto.NodeAppService/InstallApp"
 	NodeAppService_Stop_FullMethodName         = "/snproto.NodeAppService/Stop"
 	NodeAppService_Restart_FullMethodName      = "/snproto.NodeAppService/Restart"
+	NodeAppService_Start_FullMethodName        = "/snproto.NodeAppService/Start"
 )
 
 // NodeAppServiceClient is the client API for NodeAppService service.
@@ -293,6 +294,7 @@ type NodeAppServiceClient interface {
 	InstallApp(ctx context.Context, in *PiCloudApp, opts ...grpc.CallOption) (*Result, error)
 	Stop(ctx context.Context, in *NodeAppInfo, opts ...grpc.CallOption) (*Result, error)
 	Restart(ctx context.Context, in *NodeAppInfo, opts ...grpc.CallOption) (*Result, error)
+	Start(ctx context.Context, in *NodeAppInfo, opts ...grpc.CallOption) (*Result, error)
 }
 
 type nodeAppServiceClient struct {
@@ -348,6 +350,15 @@ func (c *nodeAppServiceClient) Restart(ctx context.Context, in *NodeAppInfo, opt
 	return out, nil
 }
 
+func (c *nodeAppServiceClient) Start(ctx context.Context, in *NodeAppInfo, opts ...grpc.CallOption) (*Result, error) {
+	out := new(Result)
+	err := c.cc.Invoke(ctx, NodeAppService_Start_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NodeAppServiceServer is the server API for NodeAppService service.
 // All implementations must embed UnimplementedNodeAppServiceServer
 // for forward compatibility
@@ -357,6 +368,7 @@ type NodeAppServiceServer interface {
 	InstallApp(context.Context, *PiCloudApp) (*Result, error)
 	Stop(context.Context, *NodeAppInfo) (*Result, error)
 	Restart(context.Context, *NodeAppInfo) (*Result, error)
+	Start(context.Context, *NodeAppInfo) (*Result, error)
 	mustEmbedUnimplementedNodeAppServiceServer()
 }
 
@@ -378,6 +390,9 @@ func (UnimplementedNodeAppServiceServer) Stop(context.Context, *NodeAppInfo) (*R
 }
 func (UnimplementedNodeAppServiceServer) Restart(context.Context, *NodeAppInfo) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Restart not implemented")
+}
+func (UnimplementedNodeAppServiceServer) Start(context.Context, *NodeAppInfo) (*Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Start not implemented")
 }
 func (UnimplementedNodeAppServiceServer) mustEmbedUnimplementedNodeAppServiceServer() {}
 
@@ -482,6 +497,24 @@ func _NodeAppService_Restart_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NodeAppService_Start_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeAppInfo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeAppServiceServer).Start(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeAppService_Start_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeAppServiceServer).Start(ctx, req.(*NodeAppInfo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NodeAppService_ServiceDesc is the grpc.ServiceDesc for NodeAppService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -508,6 +541,10 @@ var NodeAppService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Restart",
 			Handler:    _NodeAppService_Restart_Handler,
+		},
+		{
+			MethodName: "Start",
+			Handler:    _NodeAppService_Start_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

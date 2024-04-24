@@ -124,6 +124,7 @@ func (c *centerImpl) RegisterNode(nr *center.NodeReaction) error {
 	// ngc.
 
 	// 连接Node的Grpc，然后将连接存起来
+
 	// 定时拿一下性能信息，类似于一个心跳
 	c.nodeList = append(c.nodeList, ngc)
 
