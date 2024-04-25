@@ -92,7 +92,11 @@ func (n *NodeClientHttp) monitor(ctx *gin.Context) {
 		return
 	}
 	// return n.nodeInfo
-	ctx.JSON(200, mpj)
+	ctx.JSON(200, rest.SourceResult{
+		Data: mpj,
+		Msg:  "成功",
+		Code: 0,
+	})
 }
 
 func (n *NodeClientHttp) appList(ctx *gin.Context) {
@@ -219,8 +223,8 @@ func (n *NodeClientHttp) uninstallApp(ctx *gin.Context) {
 }
 
 func (n *NodeClientHttp) stopApp(ctx *gin.Context) {
-	nodeApp := models.NodeApp{}
 
+	nodeApp := models.NodeApp{}
 	if err := ctx.ShouldBindJSON(&nodeApp); err != nil {
 		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
 			Code: 500,
@@ -228,6 +232,7 @@ func (n *NodeClientHttp) stopApp(ctx *gin.Context) {
 		})
 		return
 	}
+	logrus.Infof("start: %+v", nodeApp)
 
 	if _, err := n.client.Stop(GetOneMinuteCtx(), nodeApp.Message()); err != nil {
 		ctx.AbortWithStatusJSON(500, &rest.SourceResult{
@@ -251,6 +256,7 @@ func (n *NodeClientHttp) startApp(ctx *gin.Context) {
 		})
 		return
 	}
+	logrus.Infof("start: %+v", nodeApp)
 
 	res, err := n.client.Start(GetOneMinuteCtx(), nodeApp.Message())
 	if err != nil {
