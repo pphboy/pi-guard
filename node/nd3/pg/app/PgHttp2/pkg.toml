@@ -1,0 +1,8 @@
+[PkgConfig]
+Name = "PgHttp2"
+Intro = "PgHttp_v5_8082"
+Type = "NORM"
+Hash = ""
+Port = 8082
+Exec = "pghttp"
+Version = 5
