@@ -33,16 +33,16 @@ type SysServiceImpl struct {
 func (s *SysServiceImpl) Install(nodeName string) error {
 	sys := &models.NodeSys{
 		NodeId:     tool.GetUUIDUpper(),
-		NodeStatus: 0,
+		NodeStatus: models.STATUS_RUNNING,
 		NodeName:   nodeName,
 		NodeDomain: fmt.Sprintf("%s.%s", nodeName, sys.ROOT_DOMAIN),
 	}
 
-	logrus.Printf("install %+v \n", sys)
-
 	if err := s.sysDao.Init(sys); err != nil {
 		return err
 	}
+
+	logrus.Printf("install %+v \n", sys)
 
 	// 只会执行一次
 	return nil

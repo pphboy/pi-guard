@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	STATUS_RUNNING   = 0
-	STATUS_STOP      = 1
+	STATUS_RUNNING   = 1
+	STATUS_STOP      = 2
 	STATUS_ERROR     = -1
 	STATUS_UN_HEALTH = -2
 )

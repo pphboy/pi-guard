@@ -19,6 +19,16 @@ service NodeService{
     rpc Shutdown(Empty) returns(Empty) {}
     // reboot的作用应该是重启服务器j
     rpc Reboot(Empty) returns(Empty) {}
+
+	rpc Log(LogParam) returns(LogInfo){}
+}
+
+message LogParam {
+	int64 lineNum = 1;
+}
+
+message LogInfo {
+	string log = 1;
 }
 
 // 安装：安装应用，获取已安装应用列表

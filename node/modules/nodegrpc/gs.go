@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-node/models"
+	"go-node/modules/logreader"
 	"go-node/modules/service"
 	gs "go-node/service"
 	"go-node/tool"
@@ -32,18 +33,25 @@ type NodeRpcService struct {
 	sys     gs.SysService
 	// 这里还需要扩展一个nodeApp serviceManager
 	//看是将Node放到这里还是将其他的内容放到这里
-	sm service.ServiceManager
+	sm        service.ServiceManager
+	logReader logreader.LogReader
 }
 
 // serviceManager属于核心模块，不能直接new
 func NewNodeRpcService(sm service.ServiceManager, bs gs.BaseService) *NodeRpcService {
+	sys := gs.NewSysService(bs)
+	nf, err := sys.GetSysInfo()
+	if err != nil {
+		logrus.Fatal("new sys service", err)
+	}
 	return &NodeRpcService{
 		monitor: gs.NewNodeMonitor(1600, 10*time.Second, func(mp []*models.MonitorPacket) {
 			logrus.Printf("monitor packet,%+v", mp)
 		}),
-		pkg: gs.NewPkgService(bs),
-		sys: gs.NewSysService(bs),
-		sm:  sm,
+		pkg:       gs.NewPkgService(bs),
+		sys:       sys,
+		sm:        sm,
+		logReader: logreader.NewLogReader(nf),
 	}
 }
 
@@ -74,8 +82,20 @@ func (n *NodeRpcService) GetNodeInfo(context.Context, *sp.Empty) (*sp.NodeSys, e
 func (n *NodeRpcService) Shutdown(context.Context, *sp.Empty) (*sp.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Shutdown not implemented")
 }
+
+func (n *NodeRpcService) Log(c context.Context, l *sp.LogParam) (*sp.LogInfo, error) {
+	bf, err := n.logReader.Log(int(l.LineNum))
+	if err != nil {
+		return nil, err
+	}
+	return &sp.LogInfo{
+		Log: bf.String(),
+	}, nil
+}
+
 func (n *NodeRpcService) Reboot(context.Context, *sp.Empty) (*sp.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Reboot not implemented")
+	logrus.Print("reboot not implemented")
+	return &sp.Empty{}, nil
 }
 
 // pkgService

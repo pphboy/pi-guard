@@ -112,6 +112,7 @@ const (
 	NodeService_GetNodeInfo_FullMethodName = "/snproto.NodeService/GetNodeInfo"
 	NodeService_Shutdown_FullMethodName    = "/snproto.NodeService/Shutdown"
 	NodeService_Reboot_FullMethodName      = "/snproto.NodeService/Reboot"
+	NodeService_Log_FullMethodName         = "/snproto.NodeService/Log"
 )
 
 // NodeServiceClient is the client API for NodeService service.
@@ -123,6 +124,7 @@ type NodeServiceClient interface {
 	Shutdown(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	// reboot的作用应该是重启服务器j
 	Reboot(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	Log(ctx context.Context, in *LogParam, opts ...grpc.CallOption) (*LogInfo, error)
 }
 
 type nodeServiceClient struct {
@@ -160,6 +162,15 @@ func (c *nodeServiceClient) Reboot(ctx context.Context, in *Empty, opts ...grpc.
 	return out, nil
 }
 
+func (c *nodeServiceClient) Log(ctx context.Context, in *LogParam, opts ...grpc.CallOption) (*LogInfo, error) {
+	out := new(LogInfo)
+	err := c.cc.Invoke(ctx, NodeService_Log_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NodeServiceServer is the server API for NodeService service.
 // All implementations must embed UnimplementedNodeServiceServer
 // for forward compatibility
@@ -169,6 +180,7 @@ type NodeServiceServer interface {
 	Shutdown(context.Context, *Empty) (*Empty, error)
 	// reboot的作用应该是重启服务器j
 	Reboot(context.Context, *Empty) (*Empty, error)
+	Log(context.Context, *LogParam) (*LogInfo, error)
 	mustEmbedUnimplementedNodeServiceServer()
 }
 
@@ -184,6 +196,9 @@ func (UnimplementedNodeServiceServer) Shutdown(context.Context, *Empty) (*Empty,
 }
 func (UnimplementedNodeServiceServer) Reboot(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Reboot not implemented")
+}
+func (UnimplementedNodeServiceServer) Log(context.Context, *LogParam) (*LogInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Log not implemented")
 }
 func (UnimplementedNodeServiceServer) mustEmbedUnimplementedNodeServiceServer() {}
 
@@ -252,6 +267,24 @@ func _NodeService_Reboot_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NodeService_Log_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogParam)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).Log(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_Log_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).Log(ctx, req.(*LogParam))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NodeService_ServiceDesc is the grpc.ServiceDesc for NodeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -270,6 +303,10 @@ var NodeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Reboot",
 			Handler:    _NodeService_Reboot_Handler,
+		},
+		{
+			MethodName: "Log",
+			Handler:    _NodeService_Log_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

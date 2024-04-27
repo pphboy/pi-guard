@@ -103,7 +103,7 @@ func (n *NodeBootImpl) Init() {
 				time.Sleep(1 * time.Second)
 				continue
 			}
-			ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 			d := fmt.Sprintf("%s.%s", n.nodeName, sys.ROOT_DOMAIN)
 			resp, err := c.SendMe(ctx, &pcent.NodeReaction{
 				Port:   int32(n.grpcPort),
@@ -111,6 +111,7 @@ func (n *NodeBootImpl) Init() {
 			})
 			if err != nil {
 				logrus.Error(err)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 			logrus.Infof("send me ok, node %s ,resp: %v\n", d, resp)
@@ -209,7 +210,6 @@ func (n *NodeBootImpl) GetServiceManager() ns.ServiceManager {
 }
 
 func (n *NodeBootImpl) initLog() error {
-	return nil
 	nm := filepath.Join(sys.PgSite(sys.PG_LOGS).Path, fmt.Sprintf("%s_sys.log", n.nodeName))
 	logFile, err := os.OpenFile(nm, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
@@ -218,7 +218,6 @@ func (n *NodeBootImpl) initLog() error {
 
 	logrus.SetOutput(logFile)
 	// above warn , can be log in file
-	logrus.SetLevel(logrus.InfoLevel)
 
 	return nil
 }

@@ -57,6 +57,7 @@ func (n *NodeClientHttp) ServeHttp(g *gin.RouterGroup) {
 	b.GET("/monitor", n.monitor)
 	b.GET("/applist", n.appList)
 	b.GET("/reboot", n.reboot)
+	b.GET("/log/:num", n.log)
 	b.POST("/install", n.installApp)
 	b.POST("/stop", n.stopApp)
 	b.POST("/start", n.startApp)
@@ -118,6 +119,34 @@ func (n *NodeClientHttp) appList(ctx *gin.Context) {
 		Data: a,
 		Msg:  "成功",
 		Code: 0,
+	})
+}
+
+func (n *NodeClientHttp) log(ctx *gin.Context) {
+	ru := &rest.RequestUriNum{}
+	if err := ctx.ShouldBindUri(ru); err != nil {
+		ctx.JSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	resp, err := n.client.Log(GetOneMinuteCtx(), &snproto.LogParam{
+		LineNum: int64(ru.Num),
+	})
+	if err != nil {
+		ctx.JSON(500, &rest.SourceResult{
+			Code: 500,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(200, &rest.SourceResult{
+		Code: 0,
+		Msg:  "重启成功，正在重启中",
+		Data: resp.Log,
 	})
 }
 

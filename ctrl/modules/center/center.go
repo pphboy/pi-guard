@@ -12,6 +12,7 @@ import (
 	rest "pi-rest"
 	"snproto"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -53,6 +54,7 @@ type Center interface {
 	RegisterNode(*center.NodeReaction) error
 	RunRpcServer() error
 	Info() *cm.PiProject
+	ExitedNode(nr *center.NodeReaction) bool
 	Port() int32
 	Node(nid string) (*cr.PiNode, error)
 	NodeList() ([]*cr.PiNode, error)
@@ -68,8 +70,12 @@ type centerServer struct {
 func (c *centerServer) SendMe(ctx context.Context, nr *center.NodeReaction) (
 	*center.CenterReaction, error) {
 	p := c.center.Info()
-	logrus.Infof("register %s:%d node reaction", nr.Domain, nr.Port)
-	c.center.RegisterNode(nr)
+	if c.center.ExitedNode(nr) {
+		logrus.Infof("registered  skip : %s:%d node reaction", nr.Domain, nr.Port)
+	} else {
+		logrus.Infof("register %s:%d node reaction", nr.Domain, nr.Port)
+		c.center.RegisterNode(nr)
+	}
 
 	return &center.CenterReaction{
 		ProjectInfo: p.Msg(),
@@ -108,6 +114,16 @@ func NewCenter(db *gorm.DB, p *cm.PiProject, group *gin.RouterGroup) Center {
 
 	go ci.RunRpcServer()
 	return ci
+
+}
+
+func (c *centerImpl) ExitedNode(nr *center.NodeReaction) bool {
+	for _, v := range c.nodeClientList {
+		if strings.Compare(nr.Domain, v.nodeInfo.NodeDomain) == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *centerImpl) RegisterNode(nr *center.NodeReaction) error {
