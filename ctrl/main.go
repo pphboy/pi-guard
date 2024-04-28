@@ -6,6 +6,8 @@ import (
 	"go-ctrl/http"
 	"go-ctrl/modules/appm"
 	centers "go-ctrl/modules/center"
+	"go-ctrl/modules/scripter"
+	"go-ctrl/modules/ssher"
 	"os"
 	"path"
 	"syscall"
@@ -41,7 +43,10 @@ func main() {
 
 	centers.NewProjectHttp(s.RouterGroup("project"), pm)
 
-	s.RouterGroup("project")
+	// s.RouterGroup("project")
+	ssher.NewSsherHttp(s.RouterGroup("term"))
+
+	scripter.NewScripterHttp(s.RouterGroup("script"))
 
 	if err := s.Run(); err != nil {
 		logrus.Fatal("ctrl http,", err)

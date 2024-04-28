@@ -12,7 +12,7 @@ type ScripterManager struct {
 	db *gorm.DB
 }
 
-func NewSsherManager() *ScripterManager {
+func NewScripterManager() *ScripterManager {
 	return &ScripterManager{
 		db: db.DB(),
 	}
