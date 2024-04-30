@@ -4,6 +4,7 @@ import (
 	"flag"
 	"go-ctrl/db"
 	"go-ctrl/http"
+	"go-ctrl/modules/admin"
 	"go-ctrl/modules/appm"
 	centers "go-ctrl/modules/center"
 	"go-ctrl/modules/scripter"
@@ -48,6 +49,7 @@ func main() {
 
 	scripter.NewScripterHttp(s.RouterGroup("script"))
 
+	admin.NewHttp(s.RouterGroup("user"))
 	if err := s.Run(); err != nil {
 		logrus.Fatal("ctrl http,", err)
 	}

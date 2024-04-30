@@ -40,6 +40,7 @@ func Init(dataPath string, name string) {
 	if err := db.AutoMigrate(&cm.PiNode{},
 		&cm.PiTerminal{},
 		&cm.PiScript{},
+		&cm.PiManager{},
 		&cm.PiProject{},
 		&models.PiCloudApp{}); err != nil {
 		panic(err)
