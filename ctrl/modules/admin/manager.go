@@ -56,12 +56,17 @@ func (s *Manager) init() {
 }
 
 func (s *Manager) Login(t *models.PiManager) (token string, err error) {
+	logrus.Printf("login manager %+v",t) 
+	
 	spm := models.PiManager{}
-	if err := s.db.Unscoped().Model(s).Where("MANAGER_USERNAME = ?", strings.ToUpper(t.ManagerUsername)).First(&spm).Error; err != nil {
+	if err := s.db.Unscoped().Where("MANAGER_USERNAME = ?", strings.ToUpper(t.ManagerUsername)).First(&spm).Error; err != nil {
 		return "", err
 	}
 
-	if strings.Compare(fmt.Sprintf("%x", sha256.Sum256([]byte(t.ManagerPswd+spm.ManagerSolt))), spm.ManagerPswd) == 0 {
+	logrus.Debug("db pswd", spm.ManagerPswd)
+	neoPaswd := fmt.Sprintf("%x",sha256.Sum256([]byte(t.ManagerPswd+spm.ManagerSolt)))
+	logrus.Debug("neo Password",neoPaswd)
+	if strings.Compare(neoPaswd, spm.ManagerPswd) == 0 {
 		return s.jjwwtt.GetJwtToken(t.ManagerUsername, spm), nil
 	} else {
 		return "", fmt.Errorf("fail password or username ")
@@ -83,6 +88,7 @@ func (s *Manager) Create(t *models.PiManager) error {
 	t.ManagerSolt = tool.GetUUIDUpper()
 	t.ManagerPswd = fmt.Sprintf("%x", sha256.Sum256([]byte(t.ManagerPswd+t.ManagerSolt)))
 	t.ManagerUsername = strings.ToUpper(t.ManagerUsername)
+	logrus.Printf("create manager %+v",t) 
 
 	if err := s.db.FirstOrCreate(t).Error; err != nil {
 		return err

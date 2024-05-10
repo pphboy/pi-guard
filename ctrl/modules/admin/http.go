@@ -53,7 +53,7 @@ func (s *managerHttp) update(c *gin.Context) {
 
 func (s *managerHttp) login(c *gin.Context) {
 	p := &models.PiManager{}
-	if err := c.ShouldBindJSON(p); err != nil {
+	if err := c.BindJSON(p); err != nil {
 		c.JSON(500, &rest.SourceResult{
 			Code: 500,
 			Msg:  err.Error(),
