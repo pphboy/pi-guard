@@ -105,6 +105,9 @@ func (n *NodeBootImpl) Init() {
 			}
 			ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 			d := fmt.Sprintf("%s.%s", n.nodeName, sys.ROOT_DOMAIN)
+			// FIXME: need get ip of this node
+			//  center use ip:port connect node
+			//  bind domain to ip , add to dns server
 			resp, err := c.SendMe(ctx, &pcent.NodeReaction{
 				Port:   int32(n.grpcPort),
 				Domain: d,
