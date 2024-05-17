@@ -15,6 +15,7 @@ service CenterRadar{
 message NodeReaction {
   string Domain = 1; 
   int32 Port = 2;
+  string Ip = 3;
 }
 
 // Center需要核对是不是node_的Center
