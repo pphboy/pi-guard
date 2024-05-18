@@ -5,6 +5,7 @@ import (
 	rest "pi-rest"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func NewSsherHttp(group *gin.RouterGroup) {
@@ -14,6 +15,7 @@ func NewSsherHttp(group *gin.RouterGroup) {
 	group.GET("list", s.list)
 	group.POST("delete", s.delete)
 	group.POST("", s.create)
+	
 	group.GET("connect", s.connect)
 }
 
@@ -22,7 +24,9 @@ type ssherHttp struct {
 }
 
 func (s *ssherHttp) connect(c *gin.Context) {
-
+	logrus.Print("connect: ",c.Copy().Query("address"))
+	var wcn *sshHandler
+	wcn.webSocket(c.Writer,c.Request)
 }
 func (s *ssherHttp) create(c *gin.Context) {
 	p := &models.PiTerminal{}
