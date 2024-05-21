@@ -15,6 +15,7 @@ import (
 	sp "snproto"
 	"time"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -38,7 +39,7 @@ type NodeRpcService struct {
 }
 
 // serviceManager属于核心模块，不能直接new
-func NewNodeRpcService(sm service.ServiceManager, bs gs.BaseService) *NodeRpcService {
+func NewNodeRpcService(sm service.ServiceManager, bs gs.BaseService, bus EventBus.Bus) *NodeRpcService {
 	sys := gs.NewSysService(bs)
 	nf, err := sys.GetSysInfo()
 	if err != nil {
@@ -48,7 +49,7 @@ func NewNodeRpcService(sm service.ServiceManager, bs gs.BaseService) *NodeRpcSer
 		monitor: gs.NewNodeMonitor(1600, 10*time.Second, func(mp []*models.MonitorPacket) {
 			logrus.Printf("monitor packet,%+v", mp)
 		}),
-		pkg:       gs.NewPkgService(bs),
+		pkg:       gs.NewPkgService(bs, bus),
 		sys:       sys,
 		sm:        sm,
 		logReader: logreader.NewLogReader(nf),
@@ -135,8 +136,11 @@ func (n *NodeRpcService) UninstallApp(ctx context.Context, na *sp.NodeAppInfo) (
 }
 
 func (n *NodeRpcService) InstallApp(ctx context.Context, spc *sp.PiCloudApp) (*sp.Result, error) {
+
+	// 安装成功，之后，需要启动应用
 	pc := &models.PiCloudApp{}
-	if err := n.pkg.InstallApp(pc.ResolveGrpcMsg(spc)); err != nil {
+	nodeApp := pc.ResolveGrpcMsg(spc)
+	if err := n.pkg.InstallApp(nodeApp); err != nil {
 		return nil, err
 	}
 
@@ -144,6 +148,7 @@ func (n *NodeRpcService) InstallApp(ctx context.Context, spc *sp.PiCloudApp) (*s
 	if err != nil {
 		return nil, err
 	}
+
 	return &sp.Result{
 		Code:    snproto.DB_DELETE_SUCCEED,
 		Message: fmt.Sprintf("安装[%s]{%s}应用成功", spc.AppId, spc.AppName),

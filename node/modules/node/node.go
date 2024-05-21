@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"go-node/models"
 	"go-node/modules/nodegrpc"
 	"go-node/modules/rproxy"
 	ns "go-node/modules/service"
@@ -14,9 +15,11 @@ import (
 	"path"
 	"path/filepath"
 	"pglib"
+	"pglib/cdns"
 	pcent "pglib/center"
 	"time"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -38,23 +41,78 @@ type NodeBootImpl struct {
 	reverseProxy   rproxy.ReverseProxy
 	sysService     gs.SysService
 	port           int
+	nodeIp         string
 	grpcPort       int
 	nodeName       string
 	center         string
+	dnsM           cdns.CdnsManager
+	bus            EventBus.Bus
 }
 
-func NewNode(center string, bs gs.BaseService, port int, gp int, nodeName string) NodeBoot {
+func NewNode(center string, bs gs.BaseService, bus EventBus.Bus,
+	port int, gp int, nodeName string,
+	netseg string, dnsM cdns.CdnsManager) NodeBoot {
+
 	n := &NodeBootImpl{
+		bus:            bus,
 		center:         center,
 		baseService:    bs,
-		pkgService:     gs.NewPkgService(bs),
+		pkgService:     gs.NewPkgService(bs, bus),
 		serviceManager: ns.NewAppDirector(),
-		reverseProxy:   rproxy.NewRProxyer(bs),
+		reverseProxy:   rproxy.NewRProxyer(bs, bus),
 		grpcPort:       gp,
 		port:           port,
 		nodeName:       nodeName,
 		sysService:     gs.NewSysService(bs),
+		dnsM:           dnsM,
 	}
+
+	bus.SubscribeAsync(ns.EVENT_ADDAPP, func(adj any) {
+		nd, ok := adj.(*models.NodeApp)
+		if ok {
+			logrus.Infof("recived cmd, running, %+v", nd)
+			appPath := path.Join(sys.PgSite(sys.PG_APP).Path, nd.NodeAppName)
+			cfg, err := pglib.LoadPackageConfig(path.Join(appPath, pglib.PKGFILE_NAME))
+			if err != nil {
+				logrus.Errorf("load pkg.toml file error: cfg: %+v, err: %v", cfg, err)
+				return
+			}
+
+			execFile := path.Join(appPath, cfg.Exec)
+			if !pglib.IsFileExist(execFile) {
+				logrus.Errorf("exec file not found in %s: cfg: %+v, err: %v", appPath, cfg, err)
+				return
+			}
+
+			n.serviceManager.AddService(ns.NewRunnerApp(
+				exec.Command(execFile),
+				nd,
+				n.baseService.DB,
+				n.dnsM,
+				n.nodeIp,
+			))
+
+			// 刷新反向代理缓存
+			if err := n.reverseProxy.RefreshCache(); err != nil {
+				logrus.Error("refresh reverseProxy cache,", err)
+			}
+
+		} else {
+			logrus.Error("excp nodeinfo", nd)
+		}
+	}, false)
+
+	// 获取结点IP，用于dns映射这个ip
+	nt := gs.NewNodeNeter()
+	nodeIp, err := nt.Ip4ByNetSegment(netseg)
+	if err != nil {
+		logrus.Fatal(err)
+	} else if nt == nil {
+		logrus.Fatal("get nil route,error network segment")
+	}
+
+	n.nodeIp = nodeIp.String()
+	logrus.Info("node ipv4", n.nodeIp)
 
 	// 安装node结点
 	n.Install()
@@ -90,8 +148,11 @@ func (n *NodeBootImpl) Init() {
 
 	}()
 
+	var client pcent.CenterRadarClient
+	d := fmt.Sprintf("%s.%s", n.nodeName, sys.ROOT_DOMAIN)
+
 	// 尝试连接center
-	go func() {
+	connCenter := func() {
 		if len(n.center) == 0 {
 			return
 		}
@@ -104,12 +165,13 @@ func (n *NodeBootImpl) Init() {
 				continue
 			}
 			ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-			d := fmt.Sprintf("%s.%s", n.nodeName, sys.ROOT_DOMAIN)
+
 			// FIXME: need get ip of this node
 			//  center use ip:port connect node
 			//  bind domain to ip , add to dns server
 			resp, err := c.SendMe(ctx, &pcent.NodeReaction{
 				Port:   int32(n.grpcPort),
+				Ip:     n.nodeIp,
 				Domain: d,
 			})
 			if err != nil {
@@ -118,9 +180,41 @@ func (n *NodeBootImpl) Init() {
 				continue
 			}
 			logrus.Infof("send me ok, node %s ,resp: %v\n", d, resp)
-			break
+			// 连上之后，开一个协程，进行健康检测
+			client = c
+			return
 		}
+	}
+
+	healSaving := func() {
+		// 健康检测
+		for {
+			if client != nil {
+				ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+				resp, err := client.GetCenter(ctx, &pcent.NodeReaction{
+					Port:   int32(n.grpcPort),
+					Ip:     n.nodeIp,
+					Domain: d,
+				})
+				if err != nil {
+					logrus.Error(err)
+					// 如果挂了，就开始connCenter
+					connCenter()
+					time.Sleep(3 * time.Second)
+				}
+				if resp != nil {
+					logrus.Info("check center health ", resp.ProjectInfo.Domain)
+				}
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}
+
+	go func() {
+		healSaving()
 	}()
+
+	go connCenter()
 
 	n.startReverseHttp()
 }
@@ -167,6 +261,8 @@ func (n *NodeBootImpl) loadAppInfo() error {
 			exec.Command(execFile),
 			v,
 			n.baseService.DB,
+			n.dnsM,
+			n.nodeIp,
 		))
 	}
 
@@ -197,7 +293,7 @@ func (n *NodeBootImpl) initGrpcServer() error {
 		}
 	}()
 
-	ns := nodegrpc.NewNodeRpcService(n.serviceManager, n.baseService)
+	ns := nodegrpc.NewNodeRpcService(n.serviceManager, n.baseService, n.bus)
 	nodegrpc.RunRpcServer(n.grpcPort, ns)
 	return nil
 }
@@ -213,6 +309,7 @@ func (n *NodeBootImpl) GetServiceManager() ns.ServiceManager {
 }
 
 func (n *NodeBootImpl) initLog() error {
+	return nil
 	nm := filepath.Join(sys.PgSite(sys.PG_LOGS).Path, fmt.Sprintf("%s_sys.log", n.nodeName))
 	logFile, err := os.OpenFile(nm, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {

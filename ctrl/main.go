@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"go-ctrl/db"
 	"go-ctrl/http"
 	"go-ctrl/modules/admin"
@@ -9,19 +10,25 @@ import (
 	centers "go-ctrl/modules/center"
 	"go-ctrl/modules/scripter"
 	"go-ctrl/modules/ssher"
+	"go-node/service"
 	"os"
 	"path"
+	"pglib/cdns"
+	"pi_dns/server"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	dataPath   = flag.String("path", "./", "store data path")
-	ctrlName   = flag.String("name", "ctrl", "controller name")
-	httpPort   = flag.Int("httpPort", 7431, "program running port")
-	picPath    = path.Join(*dataPath, "static")
-	ctrlDomain = flag.String("ctrlDomain", "ctrl.pi.g", "control domain")
+	dataPath       = flag.String("path", "./", "store data path")
+	ctrlName       = flag.String("name", "ctrl", "controller name")
+	httpPort       = flag.Int("httpPort", 7431, "program running port")
+	netseg         = flag.String("netseg", "192.168.56", "network segment")
+	dnsManager     = flag.String("dnsManager", "192.168.56.104", "grpc dns server ip")
+	dnsManagerPort = flag.String("dnsManagerPort", "50051", "grpc dns server port")
+	picPath        = path.Join(*dataPath, "static")
+	ctrlDomain     = flag.String("ctrlDomain", "ctrl.pi.g", "control domain")
 )
 
 func main() {
@@ -33,14 +40,28 @@ func main() {
 
 	s.RouterGroup("").Static("/assets", picPath)
 
+	cd := cdns.NewDnsManager(*dnsManager, *dnsManagerPort)
+
+	nt := service.NewNodeNeter()
+	nodeIp, err := nt.Ip4ByNetSegment(*netseg)
+	if err != nil {
+		logrus.Fatal(err)
+	} else if nt == nil {
+		logrus.Fatal("get nil route,error network segment")
+	}
+	cd.AddHosts(server.Host{
+		Domain: "ctrl.pi.g",
+		Ips:    []string{nodeIp.String()},
+	})
+
 	// center 中心
-	cm := centers.NewManager(s.RouterGroup("project"))
+	cm := centers.NewManager(s.RouterGroup("project"), cd, *netseg)
 
 	// Project中心
 	pm := centers.NewProjectManager(cm)
 
 	// appStore
-	appm.NewAppHttp(picPath, *ctrlDomain, s.RouterGroup("appm"))
+	appm.NewAppHttp(picPath, fmt.Sprintf("%s:%d", *ctrlDomain, *httpPort), s.RouterGroup("appm"))
 
 	centers.NewProjectHttp(s.RouterGroup("project"), pm)
 

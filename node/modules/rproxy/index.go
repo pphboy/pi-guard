@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,13 +28,11 @@ type ReverseProxy interface {
 	ReverseHandle(http.ResponseWriter, *http.Request)
 }
 
-func NewRProxyer(bs service.BaseService) ReverseProxy {
-
+func NewRProxyer(bs service.BaseService, bus EventBus.Bus) ReverseProxy {
 	rp := &RProxyer{
 		//		sysDao: dao.NewSysDao(bs.DB),
-		pkgService: service.NewPkgService(bs),
+		pkgService: service.NewPkgService(bs, bus),
 	}
-
 	rp.RefreshCache()
 
 	return rp

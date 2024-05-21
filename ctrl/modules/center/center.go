@@ -6,10 +6,13 @@ import (
 	cm "go-ctrl/models"
 	cr "go-ctrl/models"
 	"go-node/models"
+	"go-node/service"
 	"go-node/tool"
 	"net"
+	"pglib/cdns"
 	"pglib/center"
 	rest "pi-rest"
+	"pi_dns/server"
 	"snproto"
 	"strconv"
 	"strings"
@@ -52,6 +55,7 @@ Center功能：
 
 type Center interface {
 	RegisterNode(*center.NodeReaction) error
+	BindIpToDns(*center.NodeReaction) error
 	RunRpcServer() error
 	Info() *cm.PiProject
 	ExitedNode(nr *center.NodeReaction) bool
@@ -70,11 +74,14 @@ type centerServer struct {
 func (c *centerServer) SendMe(ctx context.Context, nr *center.NodeReaction) (
 	*center.CenterReaction, error) {
 	p := c.center.Info()
+
 	if c.center.ExitedNode(nr) {
 		logrus.Infof("registered  skip : %s:%d node reaction", nr.Domain, nr.Port)
 	} else {
 		logrus.Infof("register %s:%d node reaction", nr.Domain, nr.Port)
-		c.center.RegisterNode(nr)
+		if err := c.center.RegisterNode(nr); err != nil {
+			return nil, err
+		}
 	}
 
 	return &center.CenterReaction{
@@ -82,7 +89,17 @@ func (c *centerServer) SendMe(ctx context.Context, nr *center.NodeReaction) (
 	}, nil
 }
 
+func (c *centerServer) GetCenter(ctx context.Context, nr *center.NodeReaction) (
+	*center.CenterReaction, error) {
+	p := c.center.Info()
+
+	return &center.CenterReaction{
+		ProjectInfo: p.Msg(),
+	}, nil
+}
+
 type centerImpl struct {
+	dnsM    cdns.CdnsManager
 	project *cm.PiProject
 	// Node列表
 	nodeList  []*NodeGrpcClient
@@ -100,21 +117,39 @@ type NodeGrpcClient struct {
 	snproto.NodeServiceClient
 }
 
-func NewCenter(db *gorm.DB, p *cm.PiProject, group *gin.RouterGroup) Center {
-
+func NewCenter(db *gorm.DB, p *cm.PiProject, group *gin.RouterGroup, dnsM cdns.CdnsManager, netseg string) Center {
 	ci := &centerImpl{
 		project: p,
 		nodes:   make(map[string]*NodeGrpcClient),
 		// 每个center都会对应一个 以ID为根据的路由
 		group:       group.Group(strconv.Itoa(*p.ProjectId)),
 		nodeManager: NewNodeManager(),
+		dnsM:        dnsM,
 	}
+
+	// 拿到本机IP，将Center的Domain绑定到本机IP
+	net := service.NewNodeNeter()
+	ip, err := net.Ip4ByNetSegment(netseg)
+	if err != nil {
+		logrus.Fatal("failed create center", err)
+	}
+	logrus.Infof("center ip: %s", ip.String())
+
+	// 将本注册中心绑定到ip上
+	if err := dnsM.AddHosts(server.Host{
+		Domain: p.Domain,
+		Ips:    []string{ip.String()},
+	}); err != nil {
+		logrus.Fatal("failed add host binding domain", err)
+	}
+
+	logrus.Infof("domain: %s ===> %s", p.Domain, ip.String())
+
 	// 注册路由
 	ci.registerRoute()
 
 	go ci.RunRpcServer()
 	return ci
-
 }
 
 func (c *centerImpl) ExitedNode(nr *center.NodeReaction) bool {
@@ -126,8 +161,15 @@ func (c *centerImpl) ExitedNode(nr *center.NodeReaction) bool {
 	return false
 }
 
+func (c *centerImpl) BindIpToDns(nr *center.NodeReaction) error {
+
+	return nil
+}
+
 func (c *centerImpl) RegisterNode(nr *center.NodeReaction) error {
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", nr.Domain, nr.Port), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	logrus.Info("connecting ", fmt.Sprintf("%s:%d", nr.Ip, nr.Port))
+	// 使用 IP:PORT 连接
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", nr.Ip, nr.Port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
@@ -152,6 +194,7 @@ func (c *centerImpl) RegisterNode(nr *center.NodeReaction) error {
 	}
 
 	ns := tool.ConvertMsgToNodeSys(ndInfo)
+	logrus.Printf("%+v", ns)
 
 	c.nodes[ndInfo.NodeId] = ngc
 
@@ -176,6 +219,16 @@ func (c *centerImpl) RegisterNode(nr *center.NodeReaction) error {
 	if err := c.nodeManager.FirstOrCreate(pn); err != nil {
 		logrus.Error("create PiNode of center,", err)
 		return err
+	}
+
+	logrus.Infof("add host %s:%s", pn.NodeDomain, nr.Ip)
+	// 在注册结点的时候，就绑定到dns内
+	// 将node结点的域名与ip绑定
+	if err := c.dnsM.AddHosts(server.Host{
+		Domain: ndInfo.NodeDomain,
+		Ips:    []string{nr.Ip},
+	}); err != nil {
+		return fmt.Errorf("add host %s:%s %w", pn.NodeDomain, nr.Ip, err)
 	}
 
 	return nil

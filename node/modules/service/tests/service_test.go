@@ -36,7 +36,7 @@ func TestRunnerApp(t *testing.T) {
 	initer := service.NewIniter("../../../fs_root")
 
 	ra := ns.NewRunnerApp(exec.Command("./pghttp"),
-		&models.NodeApp{}, initer.GetDB())
+		&models.NodeApp{}, initer.GetDB(), nil, "")
 
 	var wg sync.WaitGroup
 
@@ -121,7 +121,7 @@ func TestServiceManager(t *testing.T) {
 	ee := exec.Command("./pghttp")
 
 	initer := service.NewIniter("../../../fs_root")
-	appSer := ns.NewRunnerApp(ee, na, initer.GetDB())
+	appSer := ns.NewRunnerApp(ee, na, initer.GetDB(), nil, "")
 	mg.AddService(appSer)
 
 	ctx, cancel := context.WithCancel(context.Background())

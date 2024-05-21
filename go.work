@@ -3,6 +3,8 @@ go 1.22.2
 use (
 	./ctrl
 	./node
+	./pidns
+	./pidns/client
 	./pkgcli
 	./rest
 )

@@ -9,6 +9,7 @@ import "google/protobuf/timestamp.proto";
 // Center则会连接到Node
 service CenterRadar{
     rpc SendMe(NodeReaction) returns (CenterReaction){}
+    rpc GetCenter(NodeReaction) returns (CenterReaction){}
 }
 
 // 连接Node的信息
@@ -27,7 +28,7 @@ message PiProject{
 	int32  ProjectId      = 1;
 	string ProjectName    = 2;
   string ProjectIntro   = 4;
-	int32  ProjectStatus  = 3;
+  int32  ProjectStatus  = 3;
   google.protobuf.Timestamp CreatedAt = 5;
   google.protobuf.Timestamp UpdatedAt = 6;
   google.protobuf.Timestamp DeletedAt = 7;

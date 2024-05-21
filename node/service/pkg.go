@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-node/dao"
 	"go-node/models"
+	"go-node/modules/service"
 	"go-node/sys"
 	"go-node/tool"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -30,9 +32,10 @@ type PkgService interface {
 	InstallApp(pc *models.PiCloudApp) error
 }
 
-func NewPkgService(bs BaseService) PkgService {
+func NewPkgService(bs BaseService, bus EventBus.Bus) PkgService {
 	return &pkgServiceImpl{
 		BaseService: bs,
+		bus:         bus,
 		appDao: &dao.AppDaoImpl{
 			Db: bs.DB,
 		},
@@ -46,6 +49,7 @@ type pkgServiceImpl struct {
 	BaseService
 	appDao dao.AppDao
 	sysDao dao.SysDao
+	bus    EventBus.Bus
 }
 
 // 加载应用列表
@@ -65,6 +69,7 @@ func (p *pkgServiceImpl) LoadAppList() (narr []*models.NodeApp, err error) {
 		if !IsDirExist(appDir) {
 			noExist = fmt.Sprintf("%s\n[%v/%v, don't have exec file]",
 				noExist, v.NodeAppId, v.NodeAppName)
+			logrus.Error(noExist)
 			continue
 		}
 		narr = append(narr, v)
@@ -163,7 +168,7 @@ func (p *pkgServiceImpl) InstallApp(pc *models.PiCloudApp) error {
 			return fmt.Errorf("get NodeInfo,%w", err)
 		}
 
-		p.appDao.Create(&models.NodeApp{
+		nd := &models.NodeApp{
 			NodeAppId:     tool.GetUUIDUpper(),
 			NodeAppType:   &models.APP_NORM,
 			NodeAppName:   cfg.Name,
@@ -171,7 +176,9 @@ func (p *pkgServiceImpl) InstallApp(pc *models.PiCloudApp) error {
 			NodeAppStatus: models.STATUS_RUNNING,
 			NodeAppIntro:  cfg.Intro,
 			NodeAppDomain: nodeInfo.GetAppDomain(strings.ToLower(cfg.Name)), // 基于此结点的根域名的，扩展子应用 app.node.pi.g
-		})
+		}
+		p.appDao.Create(nd)
+		p.bus.Publish(service.EVENT_ADDAPP, nd)
 	}
 
 	return nil

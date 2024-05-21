@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"go-node/models"
 	"os/exec"
+	"pglib/cdns"
+	"pi_dns/server"
 	"strings"
 
 	"sync"
@@ -14,6 +16,10 @@ import (
 
 var (
 	ErrNodeAppNotInService = fmt.Errorf("node app not in service")
+)
+
+const (
+	EVENT_ADDAPP = "event_service_add_app"
 )
 
 type ServiceManager interface {
@@ -33,7 +39,8 @@ type RunAppService interface {
 }
 
 func NewAppDirector() ServiceManager {
-	return &AppDirector{}
+	a := &AppDirector{}
+	return a
 }
 
 type AppDirector struct {
@@ -87,20 +94,24 @@ func (a *AppDirector) AddService(app RunAppService) {
 }
 
 // cmd 运行命令，app 为 app的安装信息
-func NewRunnerApp(cmd *exec.Cmd, app *models.NodeApp, db *gorm.DB) RunAppService {
+func NewRunnerApp(cmd *exec.Cmd, app *models.NodeApp, db *gorm.DB, dnsM cdns.CdnsManager, nodeIp string) RunAppService {
 	return &RunnerApp{
-		cmd: cmd,
-		app: app,
-		db:  db,
+		cmd:    cmd,
+		app:    app,
+		db:     db,
+		dnsM:   dnsM,
+		nodeIp: nodeIp,
 	}
 }
 
 type RunnerApp struct {
 	cmd       *exec.Cmd
+	nodeIp    string
 	db        *gorm.DB
 	app       *models.NodeApp
 	reMutex   sync.Mutex
 	runStatus bool
+	dnsM      cdns.CdnsManager
 }
 
 func (r *RunnerApp) Start() error {
@@ -109,6 +120,14 @@ func (r *RunnerApp) Start() error {
 	r.cmd = exec.Command(r.cmd.String())
 
 	go func() {
+		// bind domain to ip
+		if err := r.dnsM.AddHosts(server.Host{
+			Domain: r.app.NodeAppDomain,
+			Ips:    []string{r.nodeIp},
+		}); err != nil {
+			logrus.Errorf("failed binding dns %s to %s", r.app.NodeAppDomain, r.nodeIp)
+		}
+
 		if err := r.cmd.Run(); err != nil {
 			logrus.Errorf("App:%s, Cmd:%s, Err: %v ", r.app.NodeAppName, r.cmd.String(), err)
 
@@ -122,6 +141,13 @@ func (r *RunnerApp) Start() error {
 				r.runStatus = false
 				// 即使 变成 error，也可以尝试去启动
 				r.setStatus(models.STATUS_ERROR)
+			}
+
+			if err := r.dnsM.DelHosts(server.Host{
+				Domain: r.app.NodeAppDomain,
+				Ips:    []string{r.nodeIp},
+			}); err != nil {
+				logrus.Errorf("failed remove dns binded %s: %s", r.app.NodeAppDomain, r.nodeIp)
 			}
 		}
 	}()
